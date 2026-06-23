@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Shield, ShieldCheck, ShieldOff, ShieldAlert, Zap } from 'lucide-react';
 import { ApprovalRequest } from '../types';
@@ -8,10 +9,14 @@ interface ApprovalModalProps {
   onResolve: (action: 'once' | 'session' | 'deny') => void;
 }
 
+// Pre-compile the regex pattern for better performance
+const DANGEROUS_REGEX = new RegExp(DANGEROUS_COMMAND_PATTERNS.join('|'), 'i');
+
 export function ApprovalModal({ request, onResolve }: ApprovalModalProps) {
-  const isDangerous = new RegExp(DANGEROUS_COMMAND_PATTERNS.join('|'), 'i').test(
-    [request.command, request.input].filter(Boolean).join(' ')
-  );
+  const isDangerous = useMemo(() => {
+    const text = [request.command, request.input].filter(Boolean).join(' ');
+    return DANGEROUS_REGEX.test(text);
+  }, [request.command, request.input]);
 
   const handleResponse = async (action: 'once' | 'session' | 'deny') => {
     const approved = action !== 'deny';
