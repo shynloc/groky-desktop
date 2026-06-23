@@ -1,7 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Mutex;
 use tauri::Emitter;
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
@@ -246,8 +245,8 @@ fn parse_grok_line(line: &str) -> GrokEvent {
 
 /// Managed state holding the current grok child process and its stdin.
 struct GrokState {
-    current_child: Mutex<Option<tokio::process::Child>>,
-    // tokio mutex so we can hold it across write_all().await
+    // Use tokio::sync::Mutex for both to avoid blocking across .await
+    current_child: tokio::sync::Mutex<Option<tokio::process::Child>>,
     current_stdin: tokio::sync::Mutex<Option<tokio::process::ChildStdin>>,
 }
 
@@ -286,7 +285,7 @@ async fn send_grok_prompt(
 
     // Kill previous child (take outside mutex to avoid holding across await)
     let old_child = {
-        let mut guard = state.current_child.lock().map_err(|e| e.to_string())?;
+        let mut guard = state.current_child.lock().await;
         guard.take()
     };
     if let Some(mut child) = old_child {
@@ -352,7 +351,7 @@ async fn send_grok_prompt(
     let stderr = child.stderr.take().ok_or("No stderr")?;
 
     {
-        let mut guard = state.current_child.lock().map_err(|e| e.to_string())?;
+        let mut guard = state.current_child.lock().await;
         *guard = Some(child);
     }
     {
@@ -403,7 +402,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(GrokState {
-            current_child: Mutex::new(None),
+            current_child: tokio::sync::Mutex::new(None),
             current_stdin: tokio::sync::Mutex::new(None),
         })
         .setup(|app| {
