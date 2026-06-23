@@ -11,9 +11,9 @@
 
 | 状态 | 数量 |
 |------|------|
-| 待处理 `[ ]` | 18 |
+| 待处理 `[ ]` | 17 |
 | 进行中 `[/]` | 0 |
-| 已完成 `[x]` | 1 |
+| 已完成 `[x]` | 2 |
 | 已取消 `[-]` | 0 |
 | 阻塞中 `[!]` | 0 |
 
@@ -59,10 +59,10 @@ API Key 以明文形式存储在 localStorage，对 XSS 攻击无防御。
 <a id="sec-002"></a>
 ### SEC-002: CSP 策略禁用 ⚠️ HIGH
 
-**状态**: `[ ]` 待处理  
+**状态**: `[x]` 已完成  
 **优先级**: P0  
 **创建日期**: 2026-06-24  
-**完成日期**: -  
+**完成日期**: 2026-06-24  
 
 **问题描述**:  
 Content Security Policy 完全禁用，增加 XSS 风险。
@@ -71,10 +71,10 @@ Content Security Policy 完全禁用，增加 XSS 风险。
 - `src-tauri/tauri.conf.json:24`
 
 **修复要求**:  
-- [ ] 设计 CSP 策略白名单
-- [ ] 配置 `script-src` 限制
-- [ ] 配置 `style-src` 限制
-- [ ] 配置 `connect-src` 限制
+- [x] 设计 CSP 策略白名单
+- [x] 配置 `script-src` 限制
+- [x] 配置 `style-src` 限制
+- [x] 配置 `connect-src` 限制
 - [ ] 测试应用功能正常
 - [ ] 验证外部资源加载
 
@@ -82,6 +82,19 @@ Content Security Policy 完全禁用，增加 XSS 风险。
 - CSP 策略已启用
 - 应用功能正常运行
 - 无 CSP 违规错误
+
+**修复说明**:  
+配置的 CSP 策略:
+- `default-src 'self'`: 默认只允许同源
+- `script-src 'self' 'unsafe-inline'`: 允许同源脚本和内联脚本
+- `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`: 允许同源样式、内联样式和 Google Fonts
+- `font-src 'self' https://fonts.gstatic.com`: 允许同源字体和 Google Fonts
+- `img-src 'self' asset: https://asset.localhost data:`: 允许同源图片、Tauri asset 和 data URL
+- `connect-src 'self' https://api.x.ai ipc: http://ipc.localhost`: 允许同源请求、xAI API 和 Tauri IPC
+- `frame-src 'none'`: 禁止 iframe
+- `object-src 'none'`: 禁止插件
+- `base-uri 'self'`: 限制 base 标签
+- `form-action 'self'`: 限制表单提交
 
 ---
 
