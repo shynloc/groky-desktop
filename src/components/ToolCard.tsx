@@ -1,5 +1,6 @@
 import { Search, FileText, Terminal, Edit3, Globe } from 'lucide-react';
 import { ToolCall } from '../types';
+import { MAX_TOOL_INPUT_DISPLAY_LENGTH } from '../constants/config';
 
 interface ToolCardProps {
   tool: ToolCall;
@@ -46,7 +47,7 @@ export function ToolCard({ tool }: ToolCardProps) {
 
       {tool.input && (
         <div className="tool-input type-mono">
-          {tool.input.slice(0, 180)}{tool.input.length > 180 ? '…' : ''}
+          {tool.input.slice(0, MAX_TOOL_INPUT_DISPLAY_LENGTH)}{tool.input.length > MAX_TOOL_INPUT_DISPLAY_LENGTH ? '…' : ''}
         </div>
       )}
 

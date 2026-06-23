@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Shield, ShieldCheck, ShieldOff, ShieldAlert, Zap } from 'lucide-react';
 import { ApprovalRequest } from '../types';
+import { MAX_APPROVAL_PREVIEW_LENGTH, DANGEROUS_COMMAND_PATTERNS } from '../constants/config';
 
 interface ApprovalModalProps {
   request: ApprovalRequest;
@@ -8,7 +9,7 @@ interface ApprovalModalProps {
 }
 
 export function ApprovalModal({ request, onResolve }: ApprovalModalProps) {
-  const isDangerous = /rm\s|delete|drop\s|truncate|format|sudo|chmod|chown/i.test(
+  const isDangerous = new RegExp(DANGEROUS_COMMAND_PATTERNS.join('|'), 'i').test(
     [request.command, request.input].filter(Boolean).join(' ')
   );
 
@@ -52,7 +53,7 @@ export function ApprovalModal({ request, onResolve }: ApprovalModalProps) {
             <div className="approval-detail-label">
               {request.command ? 'Command' : 'Details'}
             </div>
-            <pre className="approval-detail-value">{preview.slice(0, 400)}</pre>
+            <pre className="approval-detail-value">{preview.slice(0, MAX_APPROVAL_PREVIEW_LENGTH)}</pre>
           </div>
         )}
 

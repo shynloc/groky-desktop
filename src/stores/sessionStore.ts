@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Session } from '../types';
+import { MAX_SESSIONS } from '../constants/config';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,7 +65,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
     }),
   addSession: (session) =>
     set((s) => {
-      const sessions = [session, ...s.sessions.filter((ss) => ss.id !== session.id)].slice(0, 20);
+      const sessions = [session, ...s.sessions.filter((ss) => ss.id !== session.id)].slice(0, MAX_SESSIONS);
       saveSessions(sessions);
       return { sessions };
     }),
