@@ -24,6 +24,35 @@ fn find_grok_binary() -> String {
     "grok".to_string()
 }
 
+/// Sanitize user input to prevent command injection
+fn sanitize_prompt(input: &str) -> String {
+    const MAX_LENGTH: usize = 100_000;
+    const DANGEROUS_PATTERNS: &[&str] = &[
+        "$(", "`", "${", "|", "&", ";", ">", "<", ">>", "<<",
+        "\n\n", "\r\n\r\n",
+    ];
+    
+    let mut sanitized = input.to_string();
+    
+    // Truncate to max length
+    if sanitized.len() > MAX_LENGTH {
+        sanitized.truncate(MAX_LENGTH);
+        sanitized.push_str("\n... [truncated]");
+    }
+    
+    // Remove null bytes
+    sanitized = sanitized.replace('\0', "");
+    
+    // Log if dangerous patterns found (for debugging)
+    for pattern in DANGEROUS_PATTERNS {
+        if sanitized.contains(pattern) {
+            eprintln!("[SECURITY] Potentially dangerous pattern '{}' found in prompt", pattern);
+        }
+    }
+    
+    sanitized
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 struct GrokEvent {
     #[serde(rename = "type")]
@@ -278,6 +307,9 @@ async fn send_grok_prompt(
     } else {
         prompt
     };
+    
+    // Security: Sanitize prompt to prevent injection
+    let prompt = sanitize_prompt(&prompt);
 
     let mut cmd = TokioCommand::new(&grok_bin);
     cmd.arg("-p")
