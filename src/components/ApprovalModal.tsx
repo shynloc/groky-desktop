@@ -1,0 +1,93 @@
+import { invoke } from '@tauri-apps/api/core';
+import { Shield, ShieldCheck, ShieldOff, ShieldAlert, Zap } from 'lucide-react';
+import { ApprovalRequest } from '../types';
+
+interface ApprovalModalProps {
+  request: ApprovalRequest;
+  onResolve: (action: 'once' | 'session' | 'deny') => void;
+}
+
+export function ApprovalModal({ request, onResolve }: ApprovalModalProps) {
+  const isDangerous = /rm\s|delete|drop\s|truncate|format|sudo|chmod|chown/i.test(
+    [request.command, request.input].filter(Boolean).join(' ')
+  );
+
+  const handleResponse = async (action: 'once' | 'session' | 'deny') => {
+    const approved = action !== 'deny';
+    try {
+      await invoke('reply_to_grok', { response: approved ? 'y' : 'n' });
+    } catch {
+      // stdin write may fail if grok already decided; ignore
+    }
+    onResolve(action);
+  };
+
+  const preview = request.command ?? request.input ?? request.description;
+
+  return (
+    <div className="approval-overlay">
+      <div className="approval-modal">
+        <div className="approval-header">
+          <ShieldAlert size={16} className={isDangerous ? 'text-danger' : 'text-accent'} />
+          <span>Permission Request</span>
+        </div>
+
+        <div className="approval-tool-row">
+          <div className={`approval-tool-icon ${isDangerous ? 'danger' : ''}`}>
+            <Shield size={13} />
+          </div>
+          <span className="type-mono">{request.tool}</span>
+          {isDangerous && <span className="approval-danger-badge">DANGEROUS</span>}
+        </div>
+
+        {request.filePath && (
+          <div className="approval-detail">
+            <div className="approval-detail-label">File</div>
+            <div className="approval-detail-value type-mono">{request.filePath}</div>
+          </div>
+        )}
+
+        {preview && (
+          <div className="approval-detail">
+            <div className="approval-detail-label">
+              {request.command ? 'Command' : 'Details'}
+            </div>
+            <pre className="approval-detail-value">{preview.slice(0, 400)}</pre>
+          </div>
+        )}
+
+        <div className="approval-actions">
+          <button onClick={() => handleResponse('deny')} className="approval-btn deny">
+            <ShieldOff size={12} />
+            Deny
+          </button>
+          <div className="approval-allow-group">
+            <button onClick={() => handleResponse('once')} className="approval-btn allow-once">
+              <Shield size={12} />
+              Allow Once
+            </button>
+            <button onClick={() => handleResponse('session')} className="approval-btn allow-session">
+              <Zap size={12} />
+              Allow Session
+            </button>
+            <button
+              onClick={async () => {
+                try { await invoke('reply_to_grok', { response: 'y' }); } catch { /* ignore */ }
+                onResolve('session');
+              }}
+              className="approval-btn always"
+            >
+              <ShieldCheck size={12} />
+              Always
+            </button>
+          </div>
+        </div>
+
+        <div className="approval-hint">
+          Groky is about to execute <strong>{request.tool}</strong>.
+          Allow Once runs it now. Allow Session skips prompts for this tool until restart.
+        </div>
+      </div>
+    </div>
+  );
+}

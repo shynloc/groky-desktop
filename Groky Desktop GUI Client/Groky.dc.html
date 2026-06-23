@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+  <style>
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.75)} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes blink-cur { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+    @keyframes slide-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fade-in { from{opacity:0} to{opacity:1} }
+    @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:1} 100%{opacity:0.4} }
+    body { margin:0; overflow:hidden; background:#0a0a0a; }
+    * { box-sizing:border-box; }
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#2a2a2a; border-radius:2px; }
+    ::-webkit-scrollbar-thumb:hover { background:#3a3a3a; }
+    textarea { resize:none; }
+    textarea:focus, button:focus { outline:none; }
+    textarea::placeholder { color:#3f3f46; }
+  </style>
+</helmet>
+
+<div style="display:flex;flex-direction:column;height:100vh;background:#0a0a0a;font-family:'DM Sans',system-ui,sans-serif;color:#ededed;overflow:hidden;position:relative">
+
+  <!-- ═══ TOP BAR ═══ -->
+  <div style="height:52px;background:#111111;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:20">
+
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:8px;padding-right:12px;border-right:1px solid #2a2a2a;flex-shrink:0">
+      <div style="width:28px;height:28px;background:#f97316;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;color:#0a0a0a;letter-spacing:-0.02em;flex-shrink:0">G</div>
+      <div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;color:#ededed;line-height:1.15">Groky</div>
+        <div style="font-size:10px;color:#52525b;line-height:1;margin-top:1px">by xAI</div>
+      </div>
+    </div>
+
+    <!-- Open Project -->
+    <button style="background:transparent;border:1px solid #2a2a2a;border-radius:5px;color:#a1a1aa;font-size:12px;padding:4px 10px;white-space:nowrap;flex-shrink:0;cursor:pointer" style-hover="background:#1a1a1a;color:#ededed;border-color:#3a3a3a">Open Project</button>
+
+    <!-- Path -->
+    <div style="font-size:11px;color:#52525b;font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">/Users/dev/projects/my-saas-app</div>
+
+    <!-- Model selector -->
+    <div style="position:relative;flex-shrink:0">
+      <button onClick="{{ toggleModel }}" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;padding:5px 10px;display:flex;align-items:center;gap:7px;cursor:pointer" style-hover="border-color:#3a3a3a">
+        <span style="width:6px;height:6px;background:#f97316;border-radius:50%;flex-shrink:0"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#f97316">{{ modelLabel }}</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <sc-if value="{{ modelOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 6px);right:0;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;width:268px;z-index:100;padding:4px;box-shadow:0 8px 32px rgba(0,0,0,0.65);animation:slide-up 150ms ease">
+          <sc-for list="{{ models }}" as="m" hint-placeholder-count="5">
+            <div onClick="{{ m.select }}" style="padding:8px 10px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:1px" style-hover="background:#222222">
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ m.nameColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.label }}</div>
+                <div style="font-size:10px;color:#52525b;margin-top:2px">{{ m.ctx }} context</div>
+              </div>
+              <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:{{ m.badgeBg }};color:{{ m.badgeColor }};font-weight:600;letter-spacing:0.05em;text-transform:uppercase;flex-shrink:0;font-family:'Space Grotesk',sans-serif">{{ m.badge }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- YOLO (off) -->
+    <sc-if value="{{ yoloOff }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ toggleYolo }}" style="background:transparent;border:1px solid #2a2a2a;border-radius:5px;color:#71717a;font-size:11px;padding:5px 10px;font-weight:600;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;flex-shrink:0;cursor:pointer" style-hover="border-color:#3a3a3a;color:#a1a1aa">YOLO</button>
+    </sc-if>
+    <!-- YOLO (on) -->
+    <sc-if value="{{ yolo }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ toggleYolo }}" style="background:rgba(249,115,22,0.14);border:1px solid rgba(249,115,22,0.4);border-radius:5px;color:#f97316;font-size:11px;padding:5px 10px;font-weight:600;letter-spacing:0.06em;font-family:'Space Grotesk',sans-serif;flex-shrink:0;cursor:pointer">YOLO</button>
+    </sc-if>
+
+    <!-- Streaming indicator -->
+    <sc-if value="{{ isStreaming }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;animation:fade-in 300ms ease">
+        <div style="width:7px;height:7px;background:#f97316;border-radius:50%;animation:pulse-dot 1.4s ease-in-out infinite"></div>
+        <span style="font-size:11px;color:#f97316;font-family:'Space Grotesk',sans-serif;font-weight:500;letter-spacing:0.02em">streaming</span>
+      </div>
+    </sc-if>
+
+    <!-- Settings -->
+    <button style="background:transparent;border:1px solid #2a2a2a;border-radius:5px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" style-hover="background:#1a1a1a;border-color:#3a3a3a">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <!-- ═══ THREE-PANEL MAIN ═══ -->
+  <div style="flex:1;display:flex;overflow:hidden">
+
+    <!-- ── SIDEBAR ── -->
+    <div style="width:260px;background:#111111;border-right:1px solid #2a2a2a;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0">
+      <div style="flex:1;overflow-y:auto;padding:8px 0">
+        <div style="font-size:10px;color:#3f3f46;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:8px 14px 6px;font-family:'Space Grotesk',sans-serif">Explorer</div>
+
+        <!-- src/ folder -->
+        <div onClick="{{ toggleSrc }}" style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px 12px;cursor:pointer" style-hover="background:#1a1a1a">
+          <svg width="9" height="9" viewBox="0 0 9 9" style="flex-shrink:0;transition:transform 150ms;transform:{{ srcArrow }}"><path d="M1.5 2.5L4.5 6L7.5 2.5" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:12px;color:#d4d4d8;font-weight:500">src</span>
+        </div>
+
+        <sc-if value="{{ srcOpen }}" hint-placeholder-val="{{ true }}">
+          <!-- auth/ -->
+          <div onClick="{{ toggleAuth }}" style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 28px;cursor:pointer" style-hover="background:#1a1a1a">
+            <svg width="9" height="9" viewBox="0 0 9 9" style="flex-shrink:0;transition:transform 150ms;transform:{{ authArrow }}"><path d="M1.5 2.5L4.5 6L7.5 2.5" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#a1a1aa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:12px;color:#a1a1aa">auth</span>
+          </div>
+
+          <sc-if value="{{ authOpen }}" hint-placeholder-val="{{ true }}">
+            <!-- index.ts -->
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 8px 4px 48px;background:{{ indexFileBg }};cursor:pointer" style-hover="background:#1a1a1a">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="{{ indexFileColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke="{{ indexFileColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span style="font-size:12px;color:{{ indexFileColor }};flex:1">index.ts</span>
+              <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:10px;color:#f97316;background:rgba(249,115,22,0.1);border-radius:3px;padding:1px 5px;font-weight:600">M</span>
+              </sc-if>
+            </div>
+            <!-- session.ts -->
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 8px 4px 48px;background:{{ sessionFileBg }};cursor:pointer" style-hover="background:#1a1a1a">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="{{ sessionFileColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke="{{ sessionFileColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span style="font-size:12px;color:{{ sessionFileColor }}">session.ts</span>
+            </div>
+            <!-- jwt.ts -->
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 8px 4px 48px;cursor:pointer" style-hover="background:#1a1a1a">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#a1a1aa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke="#a1a1aa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span style="font-size:12px;color:#a1a1aa;flex:1">jwt.ts</span>
+              <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:10px;color:#22c55e;background:rgba(34,197,94,0.1);border-radius:3px;padding:1px 5px;font-weight:600">A</span>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- components/ -->
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 28px;cursor:pointer" style-hover="background:#1a1a1a">
+            <svg width="9" height="9" viewBox="0 0 9 9"><path d="M2.5 1.5L6 4.5L2.5 7.5" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:12px;color:#71717a">components</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 28px;cursor:pointer" style-hover="background:#1a1a1a">
+            <svg width="9" height="9" viewBox="0 0 9 9"><path d="M2.5 1.5L6 4.5L2.5 7.5" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:12px;color:#71717a">pages</span>
+          </div>
+        </sc-if>
+
+        <!-- root files -->
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 12px;cursor:pointer" style-hover="background:#1a1a1a">
+          <div style="width:9px;flex-shrink:0"></div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:12px;color:#71717a">package.json</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 12px;cursor:pointer" style-hover="background:#1a1a1a">
+          <div style="width:9px;flex-shrink:0"></div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:12px;color:#71717a">README.md</span>
+        </div>
+      </div>
+
+      <!-- Sessions section -->
+      <div style="border-top:1px solid #1a1a1a;padding:10px 14px 14px">
+        <div style="font-size:10px;color:#3f3f46;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;font-family:'Space Grotesk',sans-serif">Sessions</div>
+        <div style="font-size:11px;color:#3f3f46;font-style:italic">No history yet</div>
+      </div>
+    </div>
+
+    <!-- ── CHAT AREA ── -->
+    <div style="flex:1;display:flex;flex-direction:column;background:#0a0a0a;overflow:hidden;min-width:0">
+
+      <!-- Message list -->
+      <div style="flex:1;overflow-y:auto;padding:28px 32px 20px">
+
+        <!-- User message -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
+          <div style="max-width:72%;background:#1c2228;border-radius:14px 14px 3px 14px;padding:13px 17px;font-size:14px;line-height:1.65;color:#ededed;word-break:break-word;box-shadow:0 1px 3px rgba(0,0,0,0.3)">
+            Refactor the auth system to use JWT tokens instead of sessions. Update the middleware, add a jwt helper util, and install the package.
+          </div>
+        </div>
+
+        <!-- Assistant message -->
+        <div style="max-width:84%;animation:fade-in 200ms ease">
+
+          <!-- GROKY label -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+            <div style="width:18px;height:18px;background:#f97316;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:10px;color:#0a0a0a;flex-shrink:0">G</div>
+            <span style="font-size:11px;color:#52525b;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif">Groky</span>
+          </div>
+
+          <!-- Thinking block -->
+          <div style="border:1px solid #1e1e1e;border-radius:7px;margin-bottom:10px;overflow:hidden">
+            <div onClick="{{ toggleThinking }}" style="display:flex;align-items:center;gap:8px;padding:9px 13px;cursor:pointer;background:#0f0f0f;user-select:none" style-hover="background:#141414">
+              <svg width="9" height="9" viewBox="0 0 9 9" style="flex-shrink:0;transition:transform 150ms ease;transform:{{ thinkingArrow }}"><path d="M1.5 2L5 5L8.5 2" stroke="#52525b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+              <span style="font-size:11px;color:#52525b;font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:0.07em;text-transform:uppercase">Thought Process</span>
+              <span style="font-size:11px;color:#3f3f46;margin-left:2px">— 847 tokens est.</span>
+            </div>
+            <sc-if value="{{ thinkingOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:13px 15px;background:#080808;border-top:1px solid #1a1a1a">
+                <p style="font-size:12px;color:#52525b;font-family:'JetBrains Mono',monospace;line-height:1.75;white-space:pre-wrap;margin:0">The user wants session → JWT. Steps:
+1. Read session.ts to understand current shape
+2. Create jwt.ts helper (sign + verify)
+3. Replace session middleware in auth/index.ts
+4. Install jsonwebtoken via npm
+
+I'll use search_replace for surgical edits on index.ts rather than full rewrites. The JWT secret should come from process.env.JWT_SECRET. I need to check if @types/jsonwebtoken is needed too...</p>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Tool card 1 – read_file SUCCESS -->
+          <div style="border:1px solid #1e1e1e;border-left:3px solid #22c55e;border-radius:6px;background:#0e0e0e;padding:10px 13px;margin-bottom:7px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#d4d4d8">read_file</span>
+              <span style="font-size:11px;color:#52525b;font-family:'JetBrains Mono',monospace">src/auth/session.ts</span>
+              <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0">success</span>
+            </div>
+          </div>
+
+          <!-- Tool card 2 – search_replace (state varies) -->
+          <div style="border:1px solid #1e1e1e;border-left:3px solid {{ tool2Color }};border-radius:6px;background:#0e0e0e;padding:10px 13px;margin-bottom:7px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#d4d4d8">search_replace</span>
+              <span style="font-size:11px;color:#52525b;font-family:'JetBrains Mono',monospace">src/auth/index.ts</span>
+              <!-- running -->
+              <sc-if value="{{ isScenario1 }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0">
+                  <div style="width:11px;height:11px;border:2px solid #f97316;border-top-color:transparent;border-radius:50%;animation:spin 0.75s linear infinite"></div>
+                  <span style="font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(249,115,22,0.1);color:#f97316;border:1px solid rgba(249,115,22,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif">running</span>
+                </div>
+              </sc-if>
+              <!-- awaiting approval -->
+              <sc-if value="{{ isScenario2 }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(234,179,8,0.1);color:#eab308;border:1px solid rgba(234,179,8,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0">awaiting</span>
+              </sc-if>
+              <!-- done -->
+              <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0">success</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:7px;padding-top:7px;border-top:1px solid #1a1a1a;font-size:11px;color:#f97316;display:flex;align-items:center;gap:5px;cursor:pointer" onClick="{{ setRightDiff }}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                Changes proposed — review in Diff tab
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Tool card 3 – run_terminal_command (state varies) -->
+          <div style="border:1px solid #1e1e1e;border-left:3px solid {{ tool3Color }};border-radius:6px;background:#0e0e0e;padding:10px 13px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#d4d4d8">run_terminal_command</span>
+              <span style="font-size:11px;color:#52525b;font-family:'JetBrains Mono',monospace">npm install jsonwebtoken</span>
+              <!-- pending -->
+              <sc-if value="{{ isScenario1 }}" hint-placeholder-val="{{ true }}">
+                <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(113,113,122,0.1);color:#71717a;border:1px solid rgba(113,113,122,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0">pending</span>
+              </sc-if>
+              <!-- needs review -->
+              <sc-if value="{{ isScenario2 }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(249,115,22,0.1);color:#f97316;border:1px solid rgba(249,115,22,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0;animation:shimmer 1.5s ease infinite">review</span>
+              </sc-if>
+              <!-- done -->
+              <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.18);font-weight:600;letter-spacing:0.05em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;flex-shrink:0">success</span>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- Markdown content -->
+          <div style="font-size:14px;line-height:1.75;color:#c4c4c8">
+            <p style="margin-bottom:12px"><strong style="color:#ededed;font-weight:600">Refactoring auth: sessions → JWT.</strong> Here's the plan:</p>
+
+            <!-- partial (scenarios 1 & 2) -->
+            <sc-if value="{{ notScenario3 }}" hint-placeholder-val="{{ true }}">
+              <ol style="padding-left:22px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px">
+                <li>Read <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">session.ts</code> to understand existing flow <span style="color:#22c55e">✓</span></li>
+                <li>Replace session middleware with JWT in <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">auth/index.ts</code><span style="color:#f97316"> ···</span></li>
+              </ol>
+              <span style="display:inline-block;width:2px;height:14px;background:#f97316;margin-left:1px;vertical-align:middle;animation:blink-cur 1s step-start infinite;border-radius:1px"></span>
+            </sc-if>
+
+            <!-- full (scenario 3) -->
+            <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+              <ol style="padding-left:22px;margin-bottom:16px;display:flex;flex-direction:column;gap:7px">
+                <li>Read <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">session.ts</code> — understood existing flow <span style="color:#22c55e">✓</span></li>
+                <li>Updated <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">auth/index.ts</code> — replaced session with JWT middleware <span style="color:#22c55e">✓</span></li>
+                <li>Installed <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">jsonwebtoken</code> + <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#f97316;background:#141414;padding:2px 6px;border-radius:4px">@types/jsonwebtoken</code> <span style="color:#22c55e">✓</span></li>
+              </ol>
+              <p style="margin-bottom:10px;color:#a1a1aa">The new middleware reads <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#ededed;background:#141414;padding:2px 6px;border-radius:4px">Authorization: Bearer &lt;token&gt;</code> and attaches a verified <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#ededed;background:#141414;padding:2px 6px;border-radius:4px">req.user</code> payload. Review the proposed diff before applying.</p>
+              <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:6px;padding:12px 15px">
+                <div style="font-size:10px;color:#52525b;font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Token flow</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#a1a1aa;line-height:1.8">
+                  <span style="color:#52525b">// Request header</span><br/>
+                  Authorization: Bearer <span style="color:#f97316">&lt;signed-jwt&gt;</span><br/>
+                  <span style="color:#52525b">// Middleware decodes → </span><span style="color:#22c55e">req.user</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Streaming indicator (scenario 1 only) -->
+          <sc-if value="{{ isScenario1 }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:9px;margin-top:16px">
+              <div style="display:flex;gap:4px;align-items:center">
+                <span style="width:5px;height:5px;background:#f97316;border-radius:50%;display:inline-block;animation:pulse-dot 1.4s ease-in-out 0s infinite"></span>
+                <span style="width:5px;height:5px;background:#f97316;border-radius:50%;display:inline-block;animation:pulse-dot 1.4s ease-in-out 0.25s infinite"></span>
+                <span style="width:5px;height:5px;background:#f97316;border-radius:50%;display:inline-block;animation:pulse-dot 1.4s ease-in-out 0.5s infinite"></span>
+              </div>
+              <span style="font-size:12px;color:#52525b">Groky is working</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- Composer -->
+      <div style="border-top:1px solid #1a1a1a;padding:12px 18px 14px;flex-shrink:0;background:#0a0a0a">
+        <!-- Context pills -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:5px;background:#111111;border:1px solid #2a2a2a;border-radius:20px;padding:3px 10px">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:11px;color:#71717a">my-saas-app</span>
+          </div>
+          <button style="background:transparent;border:1px dashed #2a2a2a;border-radius:20px;color:#52525b;font-size:11px;padding:3px 9px;cursor:pointer" style-hover="border-color:#3a3a3a;color:#a1a1aa">+ @file</button>
+        </div>
+
+        <!-- Textarea + actions -->
+        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:9px;padding:11px 13px 9px;display:flex;align-items:flex-end;gap:10px" style-hover="border-color:#3a3a3a">
+          <textarea value="{{ inputVal }}" onChange="{{ setInput }}" onKeyDown="{{ handleKeyDown }}" placeholder="Ask Groky anything…  (Enter to send, Shift+Enter for newline)" style="flex:1;background:transparent;border:none;color:#ededed;font-size:14px;font-family:'DM Sans',sans-serif;min-height:44px;max-height:180px;line-height:1.65;overflow-y:auto" rows="2"></textarea>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;padding-bottom:2px">
+            <button style="background:transparent;border:none;color:#52525b;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer" style-hover="background:#1e1e1e;color:#a1a1aa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button style="background:transparent;border:none;color:#52525b;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer" style-hover="background:#1e1e1e;color:#a1a1aa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </button>
+            <!-- Send (disabled) -->
+            <sc-if value="{{ sendDisabled }}" hint-placeholder-val="{{ true }}">
+              <button style="width:34px;height:34px;border-radius:50%;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;cursor:not-allowed">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3f3f46" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </sc-if>
+            <!-- Send (enabled) -->
+            <sc-if value="{{ sendEnabled }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ send }}" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,0.35)" style-hover="opacity:0.88">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- Footer row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+          <span style="font-size:11px;color:#3f3f46;font-family:'Space Grotesk',sans-serif">Grok Build <span style="color:#1f1f1f">•</span> streaming-json</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:11px;color:#3f3f46"><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;background:#141414;border:1px solid #2a2a2a;border-radius:3px;padding:1px 5px;color:#52525b">⌘K</kbd></span>
+            <span style="font-size:11px;color:#3f3f46"><kbd style="font-family:'JetBrains Mono',monospace;font-size:10px;background:#141414;border:1px solid #2a2a2a;border-radius:3px;padding:1px 5px;color:#52525b">@</kbd> files</span>
+            <!-- Effort selector -->
+            <div style="position:relative">
+              <button onClick="{{ toggleEffort }}" style="background:#141414;border:1px solid #2a2a2a;border-radius:5px;color:#71717a;font-size:11px;padding:3px 9px;display:flex;align-items:center;gap:5px;cursor:pointer" style-hover="border-color:#3a3a3a;color:#a1a1aa">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ effortLabel }}
+                <svg width="8" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <sc-if value="{{ effortOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;bottom:calc(100% + 6px);right:0;background:#141414;border:1px solid #2a2a2a;border-radius:7px;padding:4px;z-index:100;box-shadow:0 -8px 24px rgba(0,0,0,0.55);animation:slide-up 150ms ease">
+                  <sc-for list="{{ effortOptions }}" as="eo" hint-placeholder-count="6">
+                    <div onClick="{{ eo.select }}" style="padding:7px 13px;border-radius:4px;font-size:12px;color:{{ eo.color }};cursor:pointer;white-space:nowrap;background:{{ eo.bg }}" style-hover="background:#1e1e1e">{{ eo.label }}</div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT PANE ── -->
+    <div style="width:300px;background:#111111;border-left:1px solid #2a2a2a;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden">
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid #2a2a2a;flex-shrink:0">
+        <button onClick="{{ setRightContext }}" style="flex:1;background:transparent;border:none;border-bottom:{{ rtContextBorder }};padding:11px 0;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;color:{{ rtContextColor }};cursor:pointer;transition:color 150ms">Context</button>
+        <button onClick="{{ setRightDiff }}" style="flex:1;background:transparent;border:none;border-bottom:{{ rtDiffBorder }};padding:11px 0;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;color:{{ rtDiffColor }};cursor:pointer;transition:color 150ms">Diff</button>
+        <button onClick="{{ setRightSkills }}" style="flex:1;background:transparent;border:none;border-bottom:{{ rtSkillsBorder }};padding:11px 0;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;color:{{ rtSkillsColor }};cursor:pointer;transition:color 150ms">Skills</button>
+      </div>
+
+      <!-- CONTEXT tab -->
+      <sc-if value="{{ showContextPane }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <div style="font-size:10px;color:#3f3f46;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;font-family:'Space Grotesk',sans-serif">Project</div>
+            <div style="background:#1a1a1a;border:1px solid #1e1e1e;border-radius:6px;padding:11px 13px">
+              <div style="font-size:11px;color:#3f3f46;margin-bottom:3px">Path</div>
+              <div style="font-size:11px;color:#a1a1aa;font-family:'JetBrains Mono',monospace;word-break:break-all">/Users/dev/projects/my-saas-app</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#3f3f46;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;font-family:'Space Grotesk',sans-serif">Session</div>
+            <div style="background:#1a1a1a;border:1px solid #1e1e1e;border-radius:6px;overflow:hidden">
+              <div style="padding:10px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a1a1a">
+                <span style="font-size:11px;color:#3f3f46">ID</span>
+                <span style="font-size:11px;color:#a1a1aa;font-family:'JetBrains Mono',monospace">sess_4f9a2b1c</span>
+              </div>
+              <div style="padding:10px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a1a1a">
+                <span style="font-size:11px;color:#3f3f46">Model</span>
+                <span style="font-size:11px;color:#f97316;font-family:'JetBrains Mono',monospace">grok-build-0.1</span>
+              </div>
+              <div style="padding:10px 13px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;color:#3f3f46">Effort</span>
+                <span style="font-size:11px;color:#a1a1aa;font-family:'JetBrains Mono',monospace">default</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#3f3f46;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:9px;font-family:'Space Grotesk',sans-serif">Activity</div>
+            <div style="background:#1a1a1a;border:1px solid #1e1e1e;border-radius:6px;overflow:hidden">
+              <div style="padding:10px 13px;display:flex;justify-content:space-between;border-bottom:1px solid #1a1a1a">
+                <span style="font-size:11px;color:#3f3f46">Tool calls</span>
+                <span style="font-size:11px;color:#ededed;font-weight:600">3</span>
+              </div>
+              <div style="padding:10px 13px;display:flex;justify-content:space-between;border-bottom:1px solid #1a1a1a">
+                <span style="font-size:11px;color:#3f3f46">Files read</span>
+                <span style="font-size:11px;color:#ededed;font-weight:600">1</span>
+              </div>
+              <div style="padding:10px 13px;display:flex;justify-content:space-between">
+                <span style="font-size:11px;color:#3f3f46">Files modified</span>
+                <span style="font-size:11px;color:#f97316;font-weight:600">1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- DIFF tab -->
+      <sc-if value="{{ showDiffPane }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+          <div style="padding:11px 13px;border-bottom:1px solid #1e1e1e;flex-shrink:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+              <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#a1a1aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">src/auth/index.ts</span>
+              <div style="display:flex;gap:4px;flex-shrink:0">
+                <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.1);color:#ef4444;font-weight:600">-8</span>
+                <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(34,197,94,0.1);color:#22c55e;font-weight:600">+12</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:7px">
+              <button onClick="{{ applyDiff }}" style="flex:1;background:#22c55e;border:none;border-radius:6px;color:#050505;font-size:12px;font-weight:700;padding:8px 0;cursor:pointer;font-family:inherit;letter-spacing:0.01em" style-hover="opacity:0.9">Apply changes</button>
+              <button onClick="{{ rejectDiff }}" style="flex:1;background:#1a1a1a;border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:#ef4444;font-size:12px;font-weight:600;padding:8px 0;cursor:pointer;font-family:inherit" style-hover="background:rgba(239,68,68,0.08)">Reject</button>
+            </div>
+          </div>
+          <!-- Diff lines -->
+          <div style="flex:1;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9">
+            <div style="display:flex;padding:0 10px"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">1</span><span style="color:#52525b">import &#123; Express &#125; from 'express';</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">2</span><span style="color:#ef4444">- import session from 'express-session';</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">3</span><span style="color:#ef4444">- import &#123; SessionData &#125; from './session';</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+ import jwt from 'jsonwebtoken';</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+ import &#123; JWTPayload &#125; from './jwt';</span></div>
+            <div style="display:flex;padding:0 10px"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">4</span><span style="color:#2a2a2a"> </span></div>
+            <div style="display:flex;padding:0 10px"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">5</span><span style="color:#71717a">export function setupAuth(app: Express) &#123;</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">6</span><span style="color:#ef4444">-   app.use(session(&#123;</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">7</span><span style="color:#ef4444">-     secret: process.env.SESSION_SECRET!,</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">8</span><span style="color:#ef4444">-     resave: false,</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">9</span><span style="color:#ef4444">-     saveUninitialized: false,</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(239,68,68,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">10</span><span style="color:#ef4444">-   &#125;));</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+   app.use((req, res, next) =&gt; &#123;</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+     const h = req.headers.authorization;</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+     const token = h?.split(' ')[1];</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+     if (token) req.user = jwt.verify(</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+       token, process.env.JWT_SECRET!</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+     ) as JWTPayload;</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+     next();</span></div>
+            <div style="display:flex;padding:0 10px;background:rgba(34,197,94,0.07)"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none"></span><span style="color:#22c55e">+   &#125;);</span></div>
+            <div style="display:flex;padding:0 10px"><span style="color:#2a2a2a;width:26px;text-align:right;flex-shrink:0;padding-right:8px;user-select:none">11</span><span style="color:#71717a">&#125;</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- SKILLS tab -->
+      <sc-if value="{{ showSkillsPane }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px;overflow-y:auto;flex:1">
+          <div style="font-size:11px;color:#3f3f46;margin-bottom:12px;font-family:'JetBrains Mono',monospace">~/.grok/skills/</div>
+          <sc-for list="{{ skills }}" as="skill" hint-placeholder-count="4">
+            <div style="background:#1a1a1a;border:1px solid #1e1e1e;border-radius:6px;padding:10px 13px;margin-bottom:8px;cursor:pointer" style-hover="border-color:#2a2a2a;background:#1e1e1e">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:12px;color:#d4d4d8;font-weight:500;font-family:'JetBrains Mono',monospace">{{ skill.name }}</span>
+                <button style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.18);border-radius:4px;color:#f97316;font-size:10px;padding:2px 8px;cursor:pointer;font-family:inherit;font-weight:600" style-hover="background:rgba(249,115,22,0.18)">Run</button>
+              </div>
+              <div style="font-size:11px;color:#52525b">{{ skill.desc }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APPROVAL MODAL ═══ -->
+<sc-if value="{{ showApproval }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;z-index:200;animation:fade-in 150ms ease">
+    <div style="background:#141414;border:1px solid #2a2a2a;border-radius:12px;width:468px;overflow:hidden;box-shadow:0 24px 72px rgba(0,0,0,0.75);animation:slide-up 220ms ease">
+      <!-- Header -->
+      <div style="padding:22px 24px 18px;border-bottom:1px solid #1e1e1e">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div style="width:38px;height:38px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.22);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;color:#ededed;letter-spacing:-0.01em">Permission required</div>
+            <div style="font-size:12px;color:#52525b;margin-top:3px">Groky wants to execute a terminal command</div>
+          </div>
+        </div>
+      </div>
+      <!-- Command details -->
+      <div style="padding:18px 24px">
+        <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:8px;padding:14px 16px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:11px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span style="font-size:10px;color:#52525b;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif">run_terminal_command</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#f97316;background:#111111;border:1px solid #1e1e1e;border-radius:5px;padding:10px 13px">npm install jsonwebtoken @types/jsonwebtoken</div>
+          <div style="font-size:11px;color:#3f3f46;margin-top:10px">CWD: <span style="color:#71717a;font-family:'JetBrains Mono',monospace">/Users/dev/projects/my-saas-app</span></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:20px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p style="font-size:12px;color:#52525b;line-height:1.65;margin:0">Installing the JWT library required for auth refactor. Adds <code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#a1a1aa">jsonwebtoken</code> to <code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#a1a1aa">package.json</code>.</p>
+        </div>
+        <!-- Permission buttons -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button onClick="{{ approvalAllowOnce }}" style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:7px;color:#ededed;padding:11px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:all 150ms" style-hover="border-color:#3a3a3a;background:#252525">
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px">Allow once</div>
+            <div style="font-size:11px;color:#52525b">This command only</div>
+          </button>
+          <button onClick="{{ approvalAllowSession }}" style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:7px;color:#ededed;padding:11px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:all 150ms" style-hover="border-color:#3a3a3a;background:#252525">
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px">Allow in session</div>
+            <div style="font-size:11px;color:#52525b">This conversation</div>
+          </button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onClick="{{ approvalAlwaysAllow }}" style="background:rgba(249,115,22,0.09);border:1px solid rgba(249,115,22,0.22);border-radius:7px;color:#f97316;padding:11px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:all 150ms" style-hover="background:rgba(249,115,22,0.15)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px">Always allow</div>
+            <div style="font-size:11px;color:rgba(249,115,22,0.5)">All future runs</div>
+          </button>
+          <button onClick="{{ approvalDeny }}" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.16);border-radius:7px;color:#ef4444;padding:11px 14px;cursor:pointer;text-align:left;font-family:inherit;transition:all 150ms" style-hover="background:rgba(239,68,68,0.14)">
+            <div style="font-size:12px;font-weight:600;margin-bottom:3px">Deny</div>
+            <div style="font-size:11px;color:rgba(239,68,68,0.45)">Skip this call</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ═══ DEMO SWITCHER ═══ -->
+<div style="position:fixed;bottom:18px;right:18px;z-index:300;display:flex;align-items:center;gap:2px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:4px;box-shadow:0 4px 20px rgba(0,0,0,0.6)">
+  <span style="font-size:9px;color:#3f3f46;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;padding:0 8px 0 4px">Demo</span>
+  <div style="width:1px;height:16px;background:#2a2a2a;margin-right:2px"></div>
+  <sc-if value="{{ isScenario1 }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ setScenario1 }}" style="background:#f97316;border:none;border-radius:5px;color:#0a0a0a;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif">01 Live</button>
+  </sc-if>
+  <sc-if value="{{ notScenario1 }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ setScenario1 }}" style="background:transparent;border:none;border-radius:5px;color:#52525b;font-size:11px;font-weight:600;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif" style-hover="color:#a1a1aa;background:#222222">01 Live</button>
+  </sc-if>
+  <sc-if value="{{ isScenario2 }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ setScenario2 }}" style="background:#f97316;border:none;border-radius:5px;color:#0a0a0a;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif">02 Approval</button>
+  </sc-if>
+  <sc-if value="{{ notScenario2 }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ setScenario2 }}" style="background:transparent;border:none;border-radius:5px;color:#52525b;font-size:11px;font-weight:600;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif" style-hover="color:#a1a1aa;background:#222222">02 Approval</button>
+  </sc-if>
+  <sc-if value="{{ isScenario3 }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ setScenario3 }}" style="background:#f97316;border:none;border-radius:5px;color:#0a0a0a;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif">03 Diff</button>
+  </sc-if>
+  <sc-if value="{{ notScenario3 }}" hint-placeholder-val="{{ true }}">
+    <button onClick="{{ setScenario3 }}" style="background:transparent;border:none;border-radius:5px;color:#52525b;font-size:11px;font-weight:600;padding:5px 11px;cursor:pointer;font-family:'Space Grotesk',sans-serif" style-hover="color:#a1a1aa;background:#222222">03 Diff</button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    scenario: 1,
+    tick: 0,
+    thinkingOpen: false,
+    yolo: false,
+    model: 'grok-build-0.1',
+    modelOpen: false,
+    effort: 'default',
+    effortOpen: false,
+    rightTab: 'context',
+    srcOpen: true,
+    authOpen: true,
+    inputVal: '',
+  };
+
+  componentDidMount() {
+    this._timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 900);
+    this._onDocClick = () => {
+      if (this.state.modelOpen || this.state.effortOpen) {
+        this.setState({ modelOpen: false, effortOpen: false });
+      }
+    };
+    document.addEventListener('click', this._onDocClick);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._timer);
+    document.removeEventListener('click', this._onDocClick);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const sc = s.scenario;
+    const rt = s.rightTab;
+
+    const MODELS = [
+      { id: 'grok-build-0.1',   label: 'grok-build-0.1',     badge: 'coding', ctx: '256k', badgeBg: 'rgba(249,115,22,0.12)', badgeColor: '#f97316' },
+      { id: 'grok-4.3',         label: 'grok-4.3',            badge: 'best',   ctx: '256k', badgeBg: 'rgba(59,130,246,0.12)',  badgeColor: '#3b82f6' },
+      { id: 'grok-4-reasoning', label: 'Grok 4 Reasoning',    badge: 'reason', ctx: '1M',   badgeBg: 'rgba(139,92,246,0.12)',  badgeColor: '#8b5cf6' },
+      { id: 'grok-4-fast',      label: 'Grok 4 Fast',         badge: 'fast',   ctx: '256k', badgeBg: 'rgba(34,197,94,0.12)',   badgeColor: '#22c55e' },
+      { id: 'grok-4-multiagent',label: 'Grok 4 Multi-Agent',  badge: 'agents', ctx: '1M',   badgeBg: 'rgba(249,115,22,0.12)', badgeColor: '#f97316' },
+    ];
+    const EFFORTS = [
+      { id: 'default', label: 'Default' },
+      { id: 'low',     label: 'low' },
+      { id: 'medium',  label: 'medium' },
+      { id: 'high',    label: 'high' },
+      { id: 'x-high',  label: 'x-high' },
+      { id: 'max',     label: 'max' },
+    ];
+    const curModel = MODELS.find(m => m.id === s.model) || MODELS[0];
+
+    const rtBorder = (tab) => rt === tab ? '2px solid #f97316' : '2px solid transparent';
+    const rtColor  = (tab) => rt === tab ? '#ededed' : '#52525b';
+
+    const hasInput = !!(s.inputVal || '').trim();
+
+    return {
+      // ── Scenarios ──
+      isScenario1: sc === 1,
+      isScenario2: sc === 2,
+      isScenario3: sc === 3,
+      notScenario1: sc !== 1,
+      notScenario2: sc !== 2,
+      notScenario3: sc !== 3,
+      setScenario1: () => this.setState({ scenario: 1, rightTab: 'context', modelOpen: false, effortOpen: false }),
+      setScenario2: () => this.setState({ scenario: 2, rightTab: 'context', modelOpen: false, effortOpen: false }),
+      setScenario3: () => this.setState({ scenario: 3, rightTab: 'diff',    modelOpen: false, effortOpen: false }),
+
+      // ── TopBar ──
+      isStreaming: sc === 1,
+
+      // YOLO
+      yolo: s.yolo,
+      yoloOff: !s.yolo,
+      toggleYolo: () => this.setState(s2 => ({ yolo: !s2.yolo })),
+
+      // Model selector
+      modelLabel: curModel.label,
+      modelOpen: s.modelOpen,
+      toggleModel: (e) => { e.stopPropagation(); this.setState(s2 => ({ modelOpen: !s2.modelOpen, effortOpen: false })); },
+      models: MODELS.map(m => ({
+        ...m,
+        nameColor: m.id === s.model ? '#ededed' : '#a1a1aa',
+        select: (e) => { e.stopPropagation(); this.setState({ model: m.id, modelOpen: false }); },
+      })),
+
+      // ── Sidebar ──
+      srcOpen: s.srcOpen,
+      authOpen: s.authOpen,
+      toggleSrc:  () => this.setState(s2 => ({ srcOpen: !s2.srcOpen })),
+      toggleAuth: () => this.setState(s2 => ({ authOpen: !s2.authOpen })),
+      srcArrow:   s.srcOpen  ? 'rotate(0deg)' : 'rotate(-90deg)',
+      authArrow:  s.authOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+
+      // File highlights
+      indexFileColor: sc === 3 ? '#f97316' : '#a1a1aa',
+      indexFileBg:    sc === 3 ? 'rgba(249,115,22,0.06)' : 'transparent',
+      sessionFileColor: sc !== 3 ? '#f97316' : '#a1a1aa',
+      sessionFileBg:    sc !== 3 ? 'rgba(249,115,22,0.06)' : 'transparent',
+
+      // ── Tool cards ──
+      tool2Color: sc === 1 ? '#f97316' : sc === 2 ? '#eab308' : '#22c55e',
+      tool3Color: sc === 1 ? '#3f3f46'  : sc === 2 ? '#f97316' : '#22c55e',
+
+      // ── Thinking ──
+      thinkingOpen: s.thinkingOpen,
+      thinkingArrow: s.thinkingOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+      toggleThinking: () => this.setState(s2 => ({ thinkingOpen: !s2.thinkingOpen })),
+
+      // ── Right pane ──
+      rightTab: rt,
+      showContextPane: rt === 'context',
+      showDiffPane:    rt === 'diff',
+      showSkillsPane:  rt === 'skills',
+      setRightContext: () => this.setState({ rightTab: 'context' }),
+      setRightDiff:    () => this.setState({ rightTab: 'diff' }),
+      setRightSkills:  () => this.setState({ rightTab: 'skills' }),
+      rtContextColor:  rtColor('context'), rtContextBorder: rtBorder('context'),
+      rtDiffColor:     rtColor('diff'),    rtDiffBorder:    rtBorder('diff'),
+      rtSkillsColor:   rtColor('skills'),  rtSkillsBorder:  rtBorder('skills'),
+
+      // Diff actions
+      applyDiff:  () => this.setState({ scenario: 1, rightTab: 'context' }),
+      rejectDiff: () => this.setState({ scenario: 1, rightTab: 'context' }),
+
+      // Skills data
+      skills: [
+        { name: 'code-review', desc: 'Review staged changes for issues' },
+        { name: 'test-gen',    desc: 'Generate unit tests for a file' },
+        { name: 'commit-msg',  desc: 'Write a conventional commit message' },
+        { name: 'refactor',    desc: 'Suggest refactoring improvements' },
+      ],
+
+      // ── Approval modal ──
+      showApproval:         sc === 2,
+      approvalAllowOnce:    () => this.setState({ scenario: 1 }),
+      approvalAllowSession: () => this.setState({ scenario: 1 }),
+      approvalAlwaysAllow:  () => this.setState({ scenario: 1 }),
+      approvalDeny:         () => this.setState({ scenario: 1 }),
+
+      // ── Composer ──
+      inputVal: s.inputVal || '',
+      setInput: (e) => this.setState({ inputVal: e.target.value }),
+      handleKeyDown: (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if ((this.state.inputVal || '').trim()) this.setState({ scenario: 1, inputVal: '' });
+        }
+      },
+      send: () => {
+        if ((this.state.inputVal || '').trim()) this.setState({ scenario: 1, inputVal: '' });
+      },
+      sendEnabled:  hasInput,
+      sendDisabled: !hasInput,
+
+      // ── Effort ──
+      effortOpen: s.effortOpen,
+      effortLabel: s.effort === 'default' ? 'Default' : s.effort,
+      toggleEffort: (e) => { e.stopPropagation(); this.setState(s2 => ({ effortOpen: !s2.effortOpen, modelOpen: false })); },
+      effortOptions: EFFORTS.map(ef => ({
+        label: ef.label,
+        color: ef.id === s.effort ? '#f97316' : '#a1a1aa',
+        bg:    ef.id === s.effort ? 'rgba(249,115,22,0.08)' : 'transparent',
+        select: (e) => { e.stopPropagation(); this.setState({ effort: ef.id, effortOpen: false }); },
+      })),
+
+      tick: s.tick,
+    };
+  }
+}
+</script>
+</body>
+</html>
