@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FolderOpen, Brain } from 'lucide-react';
 import { MessageItem } from './MessageItem';
@@ -18,11 +18,45 @@ interface ChatPaneProps {
 export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' }: ChatPaneProps) {
   const T = (key: Parameters<typeof t>[1]) => t(language, key);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
 
+  // Check if user is near bottom
+  const checkIfNearBottom = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return true;
+    
+    const threshold = 100; // pixels from bottom
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    return scrollHeight - scrollTop - clientHeight < threshold;
+  }, []);
+
+  // Scroll to bottom with requestAnimationFrame throttling
+  const scrollToBottom = useCallback(() => {
+    if (!isNearBottomRef.current) return;
+    
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    });
+  }, []);
+
+  // Update near-bottom status on scroll
   useEffect(() => {
-    // Auto scroll to bottom when new content arrives
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages, isStreaming]);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      isNearBottomRef.current = checkIfNearBottom();
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [checkIfNearBottom]);
+
+  // Auto scroll when new content arrives (only if near bottom)
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isStreaming, scrollToBottom]);
 
   if (messages.length === 0) {
     return (
@@ -56,7 +90,7 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
   }
 
   return (
-    <div className="message-list">
+    <div ref={containerRef} className="message-list">
       <AnimatePresence initial={false}>
         {messages.map((msg, index) => (
           <motion.div
