@@ -3,23 +3,27 @@ import { ChatMessage, GrokEvent, ToolCall, ApprovalRequest, PendingDiff, Session
 import { GrokModelId, EffortLevel, AuthMode } from '../constants';
 import { Language } from '../i18n';
 import { setApiKey as saveApiKey } from '../services/secureStore';
+import { safeParseRawToolCall, safeParseRawToolResult, safeParsePermissionRequest } from '../services/typeValidation';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function parseToolCall(raw?: Record<string, unknown>, data?: string): ToolCall {
+  // Use safe parsing with validation
+  const validated = raw ? safeParseRawToolCall(raw) : null;
+  
   const id =
-    (raw?.id as string) ??
-    (raw?.tool_use_id as string) ??
+    validated?.id ??
+    validated?.tool_use_id ??
     `tool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   const tool =
-    (raw?.name as string) ??
-    (raw?.tool as string) ??
+    validated?.name ??
+    validated?.tool ??
     'unknown';
 
-  const rawInput = raw?.input ?? raw?.parameters;
+  const rawInput = validated?.input ?? validated?.parameters;
   const input = rawInput
     ? typeof rawInput === 'string'
       ? rawInput
@@ -42,16 +46,19 @@ function resolveToolResult(
   toolCalls: ToolCall[],
   raw?: Record<string, unknown>,
 ): ToolCall[] {
+  // Use safe parsing with validation
+  const validated = raw ? safeParseRawToolResult(raw) : null;
+  
   const refId =
-    (raw?.tool_use_id as string) ??
-    (raw?.id as string) ??
-    (raw?.tool_call_id as string);
+    validated?.tool_use_id ??
+    validated?.id ??
+    validated?.tool_call_id;
 
   const isError =
-    !!(raw?.is_error) ||
-    (raw?.status as string) === 'error';
+    validated?.is_error === true ||
+    validated?.status === 'error';
 
-  const rawOutput = raw?.content ?? raw?.output;
+  const rawOutput = validated?.content ?? validated?.output;
   const output =
     typeof rawOutput === 'string'
       ? rawOutput
@@ -254,7 +261,10 @@ export const useAppStore = create<AppStore>((set) => ({
       // ── Permission request ────────────────────────────────────────────────
       if (type === 'tool_permission' || type === 'permission_request') {
         const raw = raw_json ?? {};
-        const tool = (raw.tool as string) ?? (raw.name as string) ?? 'unknown';
+        // Use safe parsing with validation
+        const validated = safeParsePermissionRequest(raw);
+        
+        const tool = validated?.tool ?? validated?.name ?? 'unknown';
 
         // Auto-approve if tool is in session allow-list
         if (s.sessionAllowedTools.includes(tool)) {
@@ -264,9 +274,9 @@ export const useAppStore = create<AppStore>((set) => ({
         const request: ApprovalRequest = {
           id: `req-${Date.now()}`,
           tool,
-          command: raw.command as string | undefined,
-          description: raw.description as string | undefined,
-          filePath: (raw.path ?? raw.file_path) as string | undefined,
+          command: validated?.command,
+          description: validated?.description,
+          filePath: validated?.path ?? validated?.file_path,
           input: data || undefined,
         };
         return { ...sessionPatch, pendingApproval: request };
