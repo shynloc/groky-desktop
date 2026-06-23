@@ -119,8 +119,36 @@ async fn get_grok_models(api_key: Option<String>) -> Result<Vec<String>, String>
 
 /// Read a file's content, capped at 100 KB.
 #[tauri::command]
-async fn read_file_content(path: String) -> Result<String, String> {
+async fn read_file_content(path: String, project_path: Option<String>) -> Result<String, String> {
     const MAX_BYTES: usize = 100_000;
+    
+    // Security: Validate path is within project directory
+    if let Some(ref project) = project_path {
+        let project_canonical = std::fs::canonicalize(project)
+            .map_err(|e| format!("Invalid project path: {}", e))?;
+        let file_canonical = std::fs::canonicalize(&path)
+            .map_err(|e| format!("Invalid file path: {}", e))?;
+        
+        if !file_canonical.starts_with(&project_canonical) {
+            return Err("Access denied: file is outside project directory".to_string());
+        }
+    }
+    
+    // Security: Block access to sensitive files
+    let sensitive_patterns = [
+        ".ssh/", ".gnupg/", ".aws/", ".config/",
+        "id_rsa", "id_ed25519", "id_ecdsa",
+        ".env", ".env.local", ".env.production",
+        "credentials", "secrets", "password",
+    ];
+    
+    let path_lower = path.to_lowercase();
+    for pattern in &sensitive_patterns {
+        if path_lower.contains(pattern) {
+            return Err("Access denied: sensitive file detected".to_string());
+        }
+    }
+    
     let bytes = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
     let truncated = &bytes[..bytes.len().min(MAX_BYTES)];
     Ok(String::from_utf8_lossy(truncated).to_string())

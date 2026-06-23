@@ -127,7 +127,10 @@ function App() {
         const relPath = ref.slice(1);
         const absPath = relPath.startsWith('/') ? relPath : `${projectPath}/${relPath}`;
         try {
-          const content = await invoke<string>('read_file_content', { path: absPath });
+          const content = await invoke<string>('read_file_content', { 
+            path: absPath,
+            projectPath: projectPath 
+          });
           const ext = relPath.split('.').pop() ?? '';
           processedPrompt = processedPrompt.replace(
             ref,
