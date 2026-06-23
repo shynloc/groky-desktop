@@ -93,15 +93,23 @@ function App() {
 
   // B5: Stable ref so cleanup always calls the resolved unlisten fn.
   const unlistenRef = useRef<(() => void) | null>(null);
+  const handleGrokEventRef = useRef(handleGrokEvent);
+  
+  // Update ref when handleGrokEvent changes
+  useEffect(() => {
+    handleGrokEventRef.current = handleGrokEvent;
+  }, [handleGrokEvent]);
 
   useEffect(() => {
-    listen<GrokEvent>('grok-event', (event) => {
-      handleGrokEvent(event.payload);
-    }).then((fn) => {
+    const handler = (event: { payload: GrokEvent }) => {
+      handleGrokEventRef.current(event.payload);
+    };
+    
+    listen<GrokEvent>('grok-event', handler).then((fn) => {
       unlistenRef.current = fn;
     });
     return () => { unlistenRef.current?.(); };
-  }, [handleGrokEvent]);
+  }, []); // No dependencies needed since we use ref
 
   const handleOpenFolder = async () => {
     try {
