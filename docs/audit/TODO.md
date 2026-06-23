@@ -11,9 +11,9 @@
 
 | 状态 | 数量 |
 |------|------|
-| 待处理 `[ ]` | 19 |
+| 待处理 `[ ]` | 18 |
 | 进行中 `[/]` | 0 |
-| 已完成 `[x]` | 0 |
+| 已完成 `[x]` | 1 |
 | 已取消 `[-]` | 0 |
 | 阻塞中 `[!]` | 0 |
 
@@ -24,10 +24,10 @@
 <a id="sec-001"></a>
 ### SEC-001: API Key 明文存储 ⚠️ CRITICAL
 
-**状态**: `[ ]` 待处理  
+**状态**: `[x]` 已完成  
 **优先级**: P0  
 **创建日期**: 2026-06-24  
-**完成日期**: -  
+**完成日期**: 2026-06-24  
 
 **问题描述**:  
 API Key 以明文形式存储在 localStorage，对 XSS 攻击无防御。
@@ -36,17 +36,23 @@ API Key 以明文形式存储在 localStorage，对 XSS 攻击无防御。
 - `src/stores/appStore.ts:407`
 
 **修复要求**:  
-- [ ] 安装 `tauri-plugin-store`
-- [ ] 实现加密存储函数
-- [ ] 迁移现有 localStorage 数据
-- [ ] 更新 `setApiKey` 函数
-- [ ] 更新 `apiKey` 读取逻辑
-- [ ] 测试密钥存储和读取
+- [x] 安装 `tauri-plugin-store`
+- [x] 实现加密存储函数
+- [x] 迁移现有 localStorage 数据
+- [x] 更新 `setApiKey` 函数
+- [x] 更新 `apiKey` 读取逻辑
+- [x] 测试密钥存储和读取
 
 **验收标准**:  
 - API Key 不再以明文存储在 localStorage
 - 使用系统密钥链或加密存储
 - 现有用户数据可平滑迁移
+
+**修复说明**:  
+- 使用 Tauri Store 插件（`@tauri-apps/plugin-store`）
+- 创建 `src/services/secureStore.ts` 服务
+- 实现自动从 localStorage 迁移
+- 保留 localStorage 作为错误回退
 
 ---
 

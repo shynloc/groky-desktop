@@ -55,12 +55,35 @@
 - 无（文档初始化）
 
 **提交信息**:
-- 待提交
+- c93f3bf: docs: 添加代码审计文档体系
 
 **备注**:
 - 初始化审计文档体系
 - 包含 19 项待办事项
 - 建立可追溯的改动记录机制
+
+---
+
+### 🔒 安全修复
+
+**改动文件**:
+- `src/services/secureStore.ts`: 创建安全存储服务（新增）
+- `src/stores/appStore.ts`: 修改 API Key 存储逻辑
+- `src/App.tsx`: 添加启动时加载 API Key
+- `src-tauri/src/main.rs`: 注册 tauri-plugin-store
+- `src-tauri/Cargo.toml`: 添加 tauri-plugin-store 依赖
+- `package.json`: 添加 @tauri-apps/plugin-store 依赖
+
+**关联待办**:
+- [SEC-001] API Key 明文存储
+
+**提交信息**:
+- 待提交
+
+**备注**:
+- 使用 Tauri Store 插件替代 localStorage
+- 实现自动从 localStorage 迁移
+- 保留 localStorage 作为错误回退
 
 ---
 
@@ -130,7 +153,7 @@
 
 | 类型 | 数量 |
 |------|------|
-| 🔒 安全修复 | 0 |
+| 🔒 安全修复 | 1 |
 | 🐛 Bug 修复 | 0 |
 | ✨ 新功能 | 0 |
 | ♻️ 重构 | 0 |
@@ -139,5 +162,5 @@
 | ⚡ 性能 | 0 |
 | ✅ 测试 | 0 |
 | 🔧 配置 | 0 |
-| 📦 依赖 | 0 |
-| **总计** | **1** |
+| 📦 依赖 | 1 |
+| **总计** | **3** |

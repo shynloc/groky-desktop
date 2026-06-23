@@ -12,6 +12,7 @@ import { DiffView } from './components/DiffView';
 import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
+import { getApiKey, migrateFromLocalStorage } from './services/secureStore';
 
 // Tauri 2 injects __TAURI_INTERNALS__ (not __TAURI__) in the webview runtime.
 const IS_TAURI = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
@@ -49,6 +50,24 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Load API key from secure store on startup
+  useEffect(() => {
+    const loadApiKey = async () => {
+      if (!IS_TAURI) return;
+      try {
+        await migrateFromLocalStorage();
+        const storedKey = await getApiKey();
+        if (storedKey) {
+          setApiKey(storedKey);
+          setApiKeyInput(storedKey);
+        }
+      } catch (error) {
+        console.error('Failed to load API key:', error);
+      }
+    };
+    loadApiKey();
+  }, [setApiKey]);
 
   const refreshModels = async (key?: string) => {
     if (!IS_TAURI) return;

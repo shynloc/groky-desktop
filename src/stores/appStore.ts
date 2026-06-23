@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { ChatMessage, GrokEvent, ToolCall, ApprovalRequest, PendingDiff, Session } from '../types';
 import { GrokModelId, EffortLevel, AuthMode } from '../constants';
 import { Language } from '../i18n';
+import { setApiKey as saveApiKey } from '../services/secureStore';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -403,8 +404,18 @@ export const useAppStore = create<AppStore>((set) => ({
   toggleAlwaysApprove: () => set((s) => ({ alwaysApproveEnabled: !s.alwaysApproveEnabled })),
   authMode: (localStorage.getItem('groky-auth-mode') as AuthMode | null) ?? 'subscription',
   setAuthMode: (m) => { localStorage.setItem('groky-auth-mode', m); set({ authMode: m }); },
-  apiKey: localStorage.getItem('groky-api-key') ?? '',
-  setApiKey: (k) => { localStorage.setItem('groky-api-key', k); set({ apiKey: k }); },
+  apiKey: '', // Will be loaded asynchronously
+  setApiKey: async (k) => {
+    try {
+      await saveApiKey(k);
+      set({ apiKey: k });
+    } catch (error) {
+      console.error('Failed to save API key:', error);
+      // Fallback to localStorage in case of error
+      localStorage.setItem('groky-api-key', k);
+      set({ apiKey: k });
+    }
+  },
   dynamicModels: [],
   setDynamicModels: (models) => set({ dynamicModels: models }),
   language: (localStorage.getItem('groky-language') as Language | null) ?? 'zh',
