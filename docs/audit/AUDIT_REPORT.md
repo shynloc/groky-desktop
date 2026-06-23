@@ -5,7 +5,7 @@
 **技术栈**: Tauri 2 + React 19 + TypeScript + Vite + Zustand  
 **GitHub**: https://github.com/shynloc/groky-desktop  
 **审计日期**: 2026-06-24  
-**审计状态**: 进行中  
+**审计状态**: P0 安全问题已修复  
 
 ---
 
@@ -68,7 +68,7 @@ setApiKey: (k) => { localStorage.setItem('groky-api-key', k); set({ apiKey: k })
 - 使用系统密钥链（Tauri 提供 `tauri-plugin-store` + 加密）
 - 或至少使用加密后再存储
 
-**状态**: 待修复 → [查看待办](./TODO.md#sec-001)
+**状态**: 已修复 ✅ → [查看修复](./CHANGELOG.md#sec-001)
 
 ---
 
@@ -94,7 +94,7 @@ setApiKey: (k) => { localStorage.setItem('groky-api-key', k); set({ apiKey: k })
 - 设置严格的 CSP 策略
 - 至少限制 `script-src` 和 `style-src`
 
-**状态**: 待修复 → [查看待办](./TODO.md#sec-002)
+**状态**: 已修复 ✅ → [查看修复](./CHANGELOG.md#sec-002)
 
 ---
 
@@ -122,7 +122,7 @@ async fn read_file_content(path: String) -> Result<String, String> {
 - 验证路径在项目目录内
 - 使用 Tauri 的 scope 机制限制文件访问
 
-**状态**: 待修复 → [查看待办](./TODO.md#sec-003)
+**状态**: 已修复 ✅ → [查看修复](./CHANGELOG.md#sec-003)
 
 ---
 
@@ -146,7 +146,7 @@ cmd.arg("-p").arg(&prompt)
 - 对 prompt 进行清理和转义
 - 考虑使用文件传递 prompt 而非命令行参数
 
-**状态**: 待修复 → [查看待办](./TODO.md#sec-004)
+**状态**: 已修复 ✅ → [查看修复](./CHANGELOG.md#sec-004)
 
 ---
 
@@ -465,12 +465,12 @@ const isDangerous = /rm\s|delete|drop\s|truncate|format|sudo|chmod|chown/i.test(
 | 维度 | 评分 | 说明 |
 |------|------|------|
 | 架构设计 | 8/10 | 清晰分层，职责明确 |
-| 安全性 | 4/10 | 多个严重漏洞 |
+| 安全性 | 7/10 | P0 漏洞已修复，仍有改进空间 |
 | 代码质量 | 6/10 | 有改进空间 |
 | 性能 | 6/10 | 基本可用，大项目会卡 |
 | 可维护性 | 7/10 | 文档齐全，但代码组织可优化 |
 | 测试覆盖 | 2/10 | 几乎无测试 |
-| **综合评分** | **5.5/10** | MVP 可用，生产需加固 |
+| **综合评分** | **6.5/10** | 安全性提升，MVP 可用 |
 
 ---
 
@@ -497,3 +497,4 @@ Groky 是一个设计良好的 MVP 项目，架构清晰，用户体验考虑周
 | 日期 | 版本 | 作者 | 说明 |
 |------|------|------|------|
 | 2026-06-24 | v1.0 | AI Agent | 初始审计报告 |
+| 2026-06-24 | v1.1 | AI Agent | 修复所有 P0 安全问题 |
