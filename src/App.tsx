@@ -12,6 +12,7 @@ import { DiffView } from './components/DiffView';
 import { IconDock, AppMode, WorkView } from './components/IconDock';
 import { CommandPalette, createDefaultCommands } from './components/CommandPalette';
 import { ProjectPicker } from './components/ProjectPicker';
+import { SuggestedPrompts, getDefaultPrompts } from './components/SuggestedPrompts';
 import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
@@ -380,6 +381,12 @@ function App() {
 
           {rightTab === 'context' && (
             <div className="right-scroll context-pane">
+              <SuggestedPrompts
+                prompts={getDefaultPrompts(!!projectPath)}
+                onSelect={(prompt) => {
+                  handleSend(prompt);
+                }}
+              />
               <section>
                 <div className="panel-kicker">{T('project')}</div>
                 <div className="info-box">

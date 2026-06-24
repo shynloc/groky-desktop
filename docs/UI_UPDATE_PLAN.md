@@ -142,11 +142,12 @@
 #### 2.2 Suggested Prompts
 **优先级**: 低
 **工作量**: 1 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 在右侧面板添加 Suggested 区域
-- 根据上下文生成建议
-- 实现点击填充到 Composer
+- [x] 在右侧面板添加 Suggested 区域
+- [x] 根据上下文生成建议
+- [x] 实现点击填充到 Composer
 
 #### 2.3 完善 Welcome Screen
 **优先级**: 低
