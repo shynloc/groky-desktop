@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { List } from 'react-window';
 import { MessageItem } from './MessageItem';
 import { WelcomeScreen } from './WelcomeScreen';
 import { ChatMessage } from '../types';
@@ -13,6 +14,24 @@ interface ChatPaneProps {
   isStreaming: boolean;
   onOpenFolder?: () => void;
   language?: Language;
+}
+
+// Virtualized message row component
+function VirtualMessageRow({
+  data,
+  index,
+  style,
+}: {
+  data: { messages: ChatMessage[] };
+  index: number;
+  style: React.CSSProperties;
+}) {
+  const msg = data.messages[index];
+  return (
+    <div style={style}>
+      <MessageItem message={msg} isLast={index === data.messages.length - 1} />
+    </div>
+  );
 }
 
 export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' }: ChatPaneProps) {
@@ -58,6 +77,9 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
     scrollToBottom();
   }, [messages, isStreaming, scrollToBottom]);
 
+  // Use virtualization for large message lists
+  const useVirtualization = messages.length > 50;
+
   if (messages.length === 0) {
     return (
       <WelcomeScreen
@@ -71,6 +93,36 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
     );
   }
 
+  // Virtualized rendering for large message lists
+  if (useVirtualization) {
+    return (
+      <div ref={containerRef} className="message-list">
+        <List
+          defaultHeight={600}
+          rowCount={messages.length}
+          rowHeight={100}
+          rowComponent={({ index, style, ...props }) => (
+            <VirtualMessageRow
+              index={index}
+              style={style}
+              data={{ messages }}
+              {...props}
+            />
+          )}
+          rowProps={{}}
+        />
+        {isStreaming && (
+          <div className="streaming-indicator ml-1">
+            <div className="streaming-dot" />
+            <span>Groky {T('streaming')}…</span>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+    );
+  }
+
+  // Standard rendering for small message lists
   return (
     <div ref={containerRef} className="message-list">
       <AnimatePresence initial={false}>
