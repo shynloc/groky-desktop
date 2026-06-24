@@ -96,44 +96,48 @@
 #### 1.1 Icon Dock 组件
 **优先级**: 高
 **工作量**: 2-3 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 创建 `IconDock.tsx` 组件
-- 实现 GrokWork / GrokBuild 模式切换
-- 添加功能图标 (Settings, Extensions 等)
-- 集成到主布局
+- [x] 创建 `IconDock.tsx` 组件
+- [x] 实现 GrokWork / GrokBuild 模式切换
+- [x] 添加功能图标 (Settings, Extensions 等)
+- [x] 集成到主布局
 
 #### 1.2 模式切换功能
 **优先级**: 高
 **工作量**: 3-4 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 实现 GrokWork 模式 (Chat, Docs, Image, Voice, Projects, Research)
-- 实现 GrokBuild 模式 (当前已实现)
-- 添加模式切换逻辑和状态管理
-- 更新侧边栏根据模式显示不同内容
+- [x] 实现 GrokWork 模式 (Chat, Docs, Image, Voice, Projects, Research)
+- [x] 实现 GrokBuild 模式 (当前已实现)
+- [x] 添加模式切换逻辑和状态管理
+- [x] 更新侧边栏根据模式显示不同内容
 
 #### 1.3 Command Palette (⌘K)
 **优先级**: 中
 **工作量**: 2-3 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 创建 `CommandPalette.tsx` 组件
-- 实现快捷键触发 (⌘K)
-- 实现命令搜索和执行
-- 集成 slash commands
+- [x] 创建 `CommandPalette.tsx` 组件
+- [x] 实现快捷键触发 (⌘K)
+- [x] 实现命令搜索和执行
+- [x] 集成 slash commands
 
 ### Phase 2: 增强功能 (2-3 周)
 
 #### 2.1 Project Picker
 **优先级**: 中
 **工作量**: 2 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 创建 `ProjectPicker.tsx` 组件
-- 实现项目搜索和选择
-- 显示最近项目列表
-- 集成到 Open Project 流程
+- [x] 创建 `ProjectPicker.tsx` 组件
+- [x] 实现项目搜索和选择
+- [x] 显示最近项目列表
+- [x] 集成到 Open Project 流程
 
 #### 2.2 Suggested Prompts
 **优先级**: 低
@@ -174,16 +178,18 @@
 
 ## 📋 实现优先级
 
-| 优先级 | 功能 | 工作量 | 依赖 |
+| 优先级 | 功能 | 工作量 | 状态 |
 |--------|------|--------|------|
-| P0 | Icon Dock | 2-3 天 | 无 |
-| P0 | 模式切换 | 3-4 天 | Icon Dock |
-| P1 | Command Palette | 2-3 天 | 无 |
-| P1 | Project Picker | 2 天 | 无 |
-| P2 | Suggested Prompts | 1 天 | 无 |
-| P2 | Welcome Screen 完善 | 1 天 | 无 |
+| P0 | Icon Dock | 2-3 天 | ✅ 已完成 |
+| P0 | 模式切换 | 3-4 天 | ✅ 已完成 |
+| P1 | Command Palette | 2-3 天 | ✅ 已完成 |
+| P1 | Project Picker | 2 天 | ✅ 已完成 |
+| P2 | Suggested Prompts | 1 天 | ⏳ 待实现 |
+| P2 | Welcome Screen 完善 | 1 天 | ⏳ 待实现 |
 
 **预计总工作量**: 11-14 天
+**已完成**: 9-12 天
+**剩余**: 2 天
 
 ---
 

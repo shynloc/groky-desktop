@@ -9,6 +9,9 @@ import { ChatPane } from './components/ChatPane';
 import { FileTree } from './components/FileTree';
 import { ApprovalModal } from './components/ApprovalModal';
 import { DiffView } from './components/DiffView';
+import { IconDock, AppMode, WorkView } from './components/IconDock';
+import { CommandPalette, createDefaultCommands } from './components/CommandPalette';
+import { ProjectPicker } from './components/ProjectPicker';
 import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
@@ -24,6 +27,10 @@ function App() {
   const [pendingFile, setPendingFile] = useState<string | null>(null);
   const [modelRefreshing, setModelRefreshing] = useState(false);
   const [modelRefreshError, setModelRefreshError] = useState('');
+  const [appMode, setAppMode] = useState<AppMode>('build');
+  const [workView, setWorkView] = useState<WorkView>('chat');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
 
   const {
     projectPath, setProjectPath,
@@ -68,6 +75,18 @@ function App() {
     };
     loadApiKey();
   }, [setApiKey]);
+
+  // Command Palette keyboard shortcut (⌘K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const refreshModels = async (key?: string) => {
     if (!IS_TAURI) return;
@@ -270,6 +289,16 @@ function App() {
       />
 
       <div className="main-layout">
+        {/* ── Icon Dock ─────────────────────────────────────────────────────── */}
+        <IconDock
+          mode={appMode}
+          workView={workView}
+          onModeChange={setAppMode}
+          onWorkViewChange={setWorkView}
+          onOpenSettings={() => setRightTab('settings')}
+          language={language}
+        />
+
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <div className="sidebar">
           <div className="panel-heading">
@@ -587,6 +616,33 @@ function App() {
           }}
         />
       )}
+
+      {/* ── Command Palette ──────────────────────────────────────────────── */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        commands={createDefaultCommands({
+          onOpenFolder: handleOpenFolder,
+          onNewSession: handleNewSession,
+          onOpenSettings: () => setRightTab('settings'),
+        })}
+      />
+
+      {/* ── Project Picker ───────────────────────────────────────────────── */}
+      <ProjectPicker
+        isOpen={projectPickerOpen}
+        onClose={() => setProjectPickerOpen(false)}
+        onSelectProject={(path) => {
+          setProjectPath(path);
+          clearMessages();
+          addSystemMessage(`Project opened: ${path}\n\nAsk me anything about the codebase!`);
+        }}
+        recentProjects={sessions.map((s) => ({
+          name: s.projectName,
+          path: s.projectPath,
+          lastOpened: new Date(s.timestamp),
+        }))}
+      />
     </div>
   );
 }
