@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { List } from 'react-window';
 import { Folder, FolderOpen, File, ChevronRight, ChevronDown, FolderOpen as FolderOpenIcon, Loader2 } from 'lucide-react';
 
 interface FileEntry {
@@ -51,61 +52,76 @@ function TreeRow({
   };
 
   return (
-    <>
-      <div
-        className="file-tree-item cursor-pointer select-none"
-        style={{ paddingLeft: `${8 + indent}px`, paddingRight: '8px' }}
-        onClick={handleClick}
-        title={node.path}
-      >
-        {node.is_dir ? (
-          <>
-            <span style={{ color: 'var(--fg-5)', display: 'flex', width: 13, flexShrink: 0 }}>
-              {node.isLoading ? (
-                <Loader2 size={11} className="animate-spin" />
-              ) : node.isExpanded ? (
-                <ChevronDown size={11} />
-              ) : (
-                <ChevronRight size={11} />
-              )}
-            </span>
-            {node.isExpanded ? (
-              <FolderOpen size={13} style={{ color: 'var(--accent)', opacity: 0.75, flexShrink: 0 }} />
-            ) : (
-              <Folder size={13} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
-            )}
-          </>
-        ) : (
-          <>
-            <span style={{ width: 13, flexShrink: 0 }} />
-            <File size={13} style={{ color: 'var(--fg-5)', flexShrink: 0 }} />
-          </>
-        )}
-        <span className="truncate" style={{ color: 'var(--fg-2)' }}>{node.name}</span>
-      </div>
-
-      {node.is_dir && node.isExpanded && node.children && (
+    <div
+      className="file-tree-item cursor-pointer select-none"
+      style={{ paddingLeft: `${8 + indent}px`, paddingRight: '8px' }}
+      onClick={handleClick}
+      title={node.path}
+    >
+      {node.is_dir ? (
         <>
-          {node.children.map((child) => (
-            <TreeRow
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              onToggle={onToggle}
-              onFileClick={onFileClick}
-            />
-          ))}
-          {node.children.length === 0 && (
-            <div
-              className="text-white/25 text-[11px] py-1"
-              style={{ paddingLeft: `${10 + (depth + 1) * 12}px` }}
-            >
-              empty
-            </div>
+          <span style={{ color: 'var(--fg-5)', display: 'flex', width: 13, flexShrink: 0 }}>
+            {node.isLoading ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : node.isExpanded ? (
+              <ChevronDown size={11} />
+            ) : (
+              <ChevronRight size={11} />
+            )}
+          </span>
+          {node.isExpanded ? (
+            <FolderOpen size={13} style={{ color: 'var(--accent)', opacity: 0.75, flexShrink: 0 }} />
+          ) : (
+            <Folder size={13} style={{ color: 'var(--fg-4)', flexShrink: 0 }} />
           )}
         </>
+      ) : (
+        <>
+          <span style={{ width: 13, flexShrink: 0 }} />
+          <File size={13} style={{ color: 'var(--fg-5)', flexShrink: 0 }} />
+        </>
       )}
-    </>
+      <span className="truncate" style={{ color: 'var(--fg-2)' }}>{node.name}</span>
+    </div>
+  );
+}
+
+// Flatten tree structure for virtualization
+function flattenTree(nodes: TreeNode[], depth: number = 0): Array<{ node: TreeNode; depth: number }> {
+  const result: Array<{ node: TreeNode; depth: number }> = [];
+  for (const node of nodes) {
+    result.push({ node, depth });
+    if (node.is_dir && node.isExpanded && node.children) {
+      result.push(...flattenTree(node.children, depth + 1));
+    }
+  }
+  return result;
+}
+
+// Virtualized row component
+function VirtualRow({
+  index,
+  style,
+  items,
+  onToggle,
+  onFileClick,
+}: {
+  index: number;
+  style: React.CSSProperties;
+  items: Array<{ node: TreeNode; depth: number }>;
+  onToggle: (path: string) => void;
+  onFileClick?: (path: string) => void;
+}) {
+  const { node, depth } = items[index];
+  return (
+    <div style={style}>
+      <TreeRow
+        node={node}
+        depth={depth}
+        onToggle={onToggle}
+        onFileClick={onFileClick}
+      />
+    </div>
   );
 }
 
@@ -188,6 +204,9 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     }
   }, []);
 
+  // Flatten tree for virtualization
+  const flatItems = useMemo(() => flattenTree(roots), [roots]);
+
   if (!projectPath) {
     return (
       <div className="p-4 text-center">
@@ -210,13 +229,44 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     );
   }
 
+  // Use virtualized list for large trees
+  if (flatItems.length > 100) {
+    return (
+      <div className="file-tree-scroll flex-1">
+        <List
+          defaultHeight={600}
+          rowCount={flatItems.length}
+          rowHeight={22}
+          rowComponent={({ index, style, ...props }) => (
+            <VirtualRow
+              index={index}
+              style={style}
+              items={flatItems}
+              onToggle={handleToggle}
+              onFileClick={onFileClick}
+              {...props}
+            />
+          )}
+          rowProps={{}}
+        />
+        {isLoading && (
+          <div className="file-tree-status">
+            <Loader2 size={11} className="animate-spin flex-shrink-0" />
+            <span>加载中…</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Use regular rendering for small trees
   return (
     <div className="file-tree-scroll overflow-auto flex-1 py-1">
-      {roots.map((node) => (
+      {flatItems.map(({ node, depth }) => (
         <TreeRow
           key={node.path}
           node={node}
-          depth={0}
+          depth={depth}
           onToggle={handleToggle}
           onFileClick={onFileClick}
         />
