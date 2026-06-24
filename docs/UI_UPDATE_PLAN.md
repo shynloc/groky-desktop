@@ -152,11 +152,12 @@
 #### 2.3 完善 Welcome Screen
 **优先级**: 低
 **工作量**: 1 天
+**状态**: ✅ 已完成
 
 **实现内容**:
-- 添加 GrokWork / GrokBuild / 1M Context 三个功能卡片
-- 实现卡片点击跳转
-- 添加 Command Palette 快捷键提示
+- [x] 添加 GrokWork / GrokBuild / 1M Context 三个功能卡片
+- [x] 实现卡片点击跳转
+- [x] 添加 Command Palette 快捷键提示
 
 ### Phase 3: 优化体验 (持续)
 
@@ -185,12 +186,12 @@
 | P0 | 模式切换 | 3-4 天 | ✅ 已完成 |
 | P1 | Command Palette | 2-3 天 | ✅ 已完成 |
 | P1 | Project Picker | 2 天 | ✅ 已完成 |
-| P2 | Suggested Prompts | 1 天 | ⏳ 待实现 |
-| P2 | Welcome Screen 完善 | 1 天 | ⏳ 待实现 |
+| P2 | Suggested Prompts | 1 天 | ✅ 已完成 |
+| P2 | Welcome Screen 完善 | 1 天 | ✅ 已完成 |
 
 **预计总工作量**: 11-14 天
-**已完成**: 9-12 天
-**剩余**: 2 天
+**已完成**: 11-14 天 (100%)
+**剩余**: 0 天
 
 ---
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderOpen, Brain } from 'lucide-react';
 import { MessageItem } from './MessageItem';
+import { WelcomeScreen } from './WelcomeScreen';
 import { ChatMessage } from '../types';
 import { Language, t } from '../i18n';
 
@@ -60,32 +60,14 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
 
   if (messages.length === 0) {
     return (
-      <div className="empty-chat">
-        <div className="empty-chat-inner">
-          <div className="empty-chat-icon">
-            <Brain size={28} />
-          </div>
-          <div className="empty-title">{T('readyToBuild')}</div>
-          <p>
-            {T('readyDesc')}<br />
-            {T('readyExample') && (
-              <span className="type-mono text-accent">{T('readyExample')}</span>
-            )}
-          </p>
-
-          <button
-            onClick={() => onOpenFolder?.()}
-            className="primary-action"
-          >
-            <FolderOpen size={16} />
-            {T('openProjectFolder')}
-          </button>
-
-          <div className="empty-caption">
-            {T('dragFolder')}
-          </div>
-        </div>
-      </div>
+      <WelcomeScreen
+        onOpenFolder={() => onOpenFolder?.()}
+        onStartChat={() => {
+          // Focus on the composer input
+          const composer = document.querySelector('.composer textarea') as HTMLTextAreaElement;
+          composer?.focus();
+        }}
+      />
     );
   }
 

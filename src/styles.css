@@ -2296,3 +2296,171 @@ kbd {
   border-color: var(--border);
   color: var(--fg-1);
 }
+
+/* ── Welcome Screen ─────────────────────────────────────────────────────────── */
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: var(--bg-0);
+  gap: 34px;
+  animation: fade-in 250ms ease;
+}
+
+.welcome-content {
+  width: 100%;
+  max-width: 580px;
+  text-align: center;
+}
+
+.welcome-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.welcome-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-3);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--fg-1);
+  letter-spacing: -0.025em;
+}
+
+.welcome-subtitle {
+  font-size: 13px;
+  color: var(--fg-5);
+  margin-top: 5px;
+}
+
+.welcome-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.welcome-feature-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.welcome-feature-card:hover {
+  border-color: var(--border-bright);
+}
+
+.welcome-feature-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.welcome-feature-title {
+  font-size: 13px;
+  color: var(--fg-2);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.welcome-feature-desc {
+  font-size: 11px;
+  color: var(--fg-5);
+  line-height: 1.55;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.welcome-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  transition: opacity 150ms ease;
+}
+
+.welcome-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.welcome-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-3);
+  color: var(--fg-3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.welcome-btn-secondary:hover {
+  border-color: var(--border-bright);
+  color: var(--fg-1);
+}
+
+.welcome-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.welcome-shortcut kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 2px 7px;
+  color: var(--fg-5);
+}
+
+.welcome-shortcut span {
+  font-size: 12px;
+  color: var(--fg-5);
+}
