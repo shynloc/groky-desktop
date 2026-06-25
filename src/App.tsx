@@ -26,6 +26,7 @@ import { t } from './i18n';
 import { getApiKey, migrateFromLocalStorage } from './services/secureStore';
 import { messagesToMarkdown, downloadMarkdown } from './services/exportSession';
 import { estimateMessageTokens } from './services/tokenEstimate';
+import { acpService } from './services/acpService';
 
 // Tauri 2 injects __TAURI_INTERNALS__ (not __TAURI__) in the webview runtime.
 const IS_TAURI = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
@@ -51,6 +52,7 @@ function App() {
     addUserMessage, addSystemMessage, handleGrokEvent, clearMessages,
     pendingApproval, setPendingApproval, allowToolForSession,
     pendingDiffs, resolveDiff,
+    acpSessionId, setAcpSessionId,
     sessions, removeSession, addSession,
     language, setLanguage,
     theme, setTheme,
@@ -232,17 +234,38 @@ function App() {
       }
     }
 
+    // Create ACP session if none exists
+    let sessionId = acpSessionId;
+    if (!sessionId && IS_TAURI) {
+      const acpCtx = await acpService.createSession(projectPath, model);
+      if (acpCtx) {
+        sessionId = acpCtx.session.id;
+        setAcpSessionId(sessionId);
+      }
+    }
+
     addUserMessage(rawPrompt);
     if (!firstMessageRef.current) {
       firstMessageRef.current = rawPrompt.slice(0, 120);
     }
     setIsStreaming(true);
 
+    // Check context compaction warning
+    if (sessionId && IS_TAURI) {
+      const needsCompact = await acpService.needsCompaction(sessionId);
+      if (needsCompact) {
+        addSystemMessage('Context window is getting large (>75% used). Consider using the Compact button in the status bar to free up context.');
+      }
+    }
+
     try {
+      // Get grok session ID for resuming (ACP continuity)
+      const grokSid = sessionId ? await acpService.getGrokSessionId(sessionId) : null;
+
       await invoke('send_grok_prompt', {
         prompt: processedPrompt,
         cwd: projectPath,
-        session_id: currentSessionId,
+        session_id: grokSid ?? currentSessionId,
         model,
         always_approve: alwaysApproveEnabled,
         plan_mode: planMode,
@@ -274,6 +297,7 @@ function App() {
 
   const handleNewSession = () => {
     setSessionId(null);
+    setAcpSessionId(null);
     clearMessages();
     addSystemMessage('New Grok Build session started. Headless runs will create a fresh session on the next prompt.');
   };

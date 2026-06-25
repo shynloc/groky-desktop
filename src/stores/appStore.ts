@@ -39,6 +39,10 @@ export function useAppStore() {
     addSession: session.addSession,
     initSessions: session.initSessions,
 
+    // ACP session
+    acpSessionId: chat.acpSessionId,
+    setAcpSessionId: chat.setAcpSessionId,
+
     // Settings store
     model: settings.model,
     effort: settings.effort,

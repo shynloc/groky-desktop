@@ -1,4 +1,5 @@
 use crate::grok::{self, FileEntry, GrokState, InspectReport};
+use crate::acp;
 use tokio::process::Command as TokioCommand;
 
 // ── Filesystem Commands ──────────────────────────────────────────────────────
@@ -295,4 +296,76 @@ pub async fn send_grok_prompt(
         effort.as_deref(),
         api_key.as_deref(),
     ).await
+}
+
+// ── ACP Session Commands ─────────────────────────────────────────────────────
+
+/// Create a new ACP session.
+#[tauri::command]
+pub async fn acp_create_session(
+    project_path: String,
+    model: Option<String>,
+) -> Result<acp::AcpSessionContext, String> {
+    let ctx = acp::create_session(&project_path, model.as_deref(), 256_000);
+    acp::save_session(&ctx).await?;
+    Ok(ctx)
+}
+
+/// Resume an existing ACP session.
+#[tauri::command]
+pub async fn acp_resume_session(session_id: String) -> Result<acp::AcpSessionContext, String> {
+    acp::load_session(&session_id).await
+}
+
+/// List all saved ACP sessions.
+#[tauri::command]
+pub async fn acp_list_sessions() -> Result<Vec<acp::AcpSession>, String> {
+    acp::list_sessions().await
+}
+
+/// Delete an ACP session.
+#[tauri::command]
+pub async fn acp_delete_session(session_id: String) -> Result<(), String> {
+    acp::delete_session(&session_id).await
+}
+
+/// Update session stats after a response cycle.
+#[tauri::command]
+pub async fn acp_update_session(
+    session_id: String,
+    tokens_used: usize,
+    grok_session_id: Option<String>,
+) -> Result<acp::AcpSessionContext, String> {
+    let mut ctx = acp::load_session(&session_id).await?;
+    acp::update_session_stats(&mut ctx, tokens_used);
+    if let Some(sid) = grok_session_id {
+        ctx.grok_session_id = Some(sid);
+    }
+    acp::save_session(&ctx).await?;
+    Ok(ctx)
+}
+
+/// Check if a session needs context compaction.
+#[tauri::command]
+pub async fn acp_needs_compaction(session_id: String) -> Result<bool, String> {
+    let ctx = acp::load_session(&session_id).await?;
+    Ok(acp::needs_compaction(&ctx))
+}
+
+/// Add a tool to the session allow-list.
+#[tauri::command]
+pub async fn acp_allow_tool(session_id: String, tool: String) -> Result<(), String> {
+    let mut ctx = acp::load_session(&session_id).await?;
+    if !ctx.allowed_tools.contains(&tool) {
+        ctx.allowed_tools.push(tool);
+    }
+    acp::save_session(&ctx).await?;
+    Ok(())
+}
+
+/// Get the saved grok session ID for resuming.
+#[tauri::command]
+pub async fn acp_get_grok_session_id(session_id: String) -> Result<Option<String>, String> {
+    let ctx = acp::load_session(&session_id).await?;
+    Ok(ctx.grok_session_id)
 }

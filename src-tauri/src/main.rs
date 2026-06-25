@@ -3,6 +3,7 @@
 
 mod grok;
 mod commands;
+mod acp;
 
 use grok::GrokState;
 
@@ -39,6 +40,14 @@ fn main() {
             commands::keychain_set_api_key,
             commands::keychain_get_api_key,
             commands::keychain_delete_api_key,
+            commands::acp_create_session,
+            commands::acp_resume_session,
+            commands::acp_list_sessions,
+            commands::acp_delete_session,
+            commands::acp_update_session,
+            commands::acp_needs_compaction,
+            commands::acp_allow_tool,
+            commands::acp_get_grok_session_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

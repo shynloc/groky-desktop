@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ChatMessage, GrokEvent, ToolCall, TodoItem, ApprovalRequest, PendingDiff } from '../types';
 import { safeParseRawToolCall, safeParseRawToolResult, safeParsePermissionRequest } from '../services/typeValidation';
+import { acpService } from '../services/acpService';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -125,6 +126,10 @@ export interface ChatStore {
   isStreaming: boolean;
   setIsStreaming: (v: boolean) => void;
 
+  // ACP Session
+  acpSessionId: string | null;
+  setAcpSessionId: (id: string | null) => void;
+
   // Approval
   pendingApproval: ApprovalRequest | null;
   setPendingApproval: (r: ApprovalRequest | null) => void;
@@ -173,6 +178,14 @@ export const useChatStore = create<ChatStore>((set) => ({
 
         if (last?.isStreaming) {
           updates.messages = [...msgs.slice(0, -1), { ...last, isStreaming: false }];
+        }
+
+        // Extract session_id from end event for ACP tracking
+        const grokSessionId = event.session_id ?? (raw_json as Record<string, unknown>)?.session_id as string | undefined;
+        if (grokSessionId && s.acpSessionId) {
+          // Fire-and-forget: save grok session ID and update stats
+          const tokenEstimate = msgs.reduce((acc, m) => acc + (m.content?.length ?? 0) / 4, 0);
+          acpService.updateSession(s.acpSessionId, Math.ceil(tokenEstimate), grokSessionId).catch(() => {});
         }
 
         return updates;
@@ -329,6 +342,10 @@ export const useChatStore = create<ChatStore>((set) => ({
   // ── Streaming ─────────────────────────────────────────────────────────────
   isStreaming: false,
   setIsStreaming: (v) => set({ isStreaming: v }),
+
+  // ── ACP Session ───────────────────────────────────────────────────────────
+  acpSessionId: null,
+  setAcpSessionId: (id) => set({ acpSessionId: id }),
 
   // ── Approval ──────────────────────────────────────────────────────────────
   pendingApproval: null,
