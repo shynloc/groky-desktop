@@ -123,42 +123,61 @@ UI 实时渲染（ChatPane + ToolTimeline + DiffViewer）
 
 ---
 
-## 4. 目录结构建议
+## 4. 目录结构（实际）
 
 ```
 groky/
-├── src-tauri/                  # Tauri Rust 后端
+├── src-tauri/                  # Tauri Rust 后端（单文件）
 │   ├── src/
-│   │   ├── main.rs
-│   │   ├── commands.rs         # Tauri invoke commands
-│   │   ├── grok/
-│   │   │   ├── mod.rs
-│   │   │   ├── acp_client.rs   # ACP JSON-RPC 实现（核心）
-│   │   │   ├── headless.rs
-│   │   │   └── process.rs
-│   │   ├── fs.rs
-│   │   ├── permissions.rs
-│   │   └── settings.rs
+│   │   └── main.rs             # 所有 Tauri 命令 + 进程管理 + 事件解析
 │   ├── Cargo.toml
+│   ├── build.rs
 │   └── tauri.conf.json
 ├── src/                        # React 前端
 │   ├── components/
-│   │   ├── layout/
-│   │   ├── chat/
-│   │   ├── composer/
-│   │   ├── filetree/
-│   │   ├── diff/
-│   │   └── modals/
-│   ├── stores/                 # Zustand stores
-│   ├── hooks/
-│   ├── lib/                    # utils, types
-│   └── App.tsx
-├── docs/                       # PRD、架构、组件等文档
-├── design/
-├── public/
+│   │   ├── work/               # Work 模式子视图
+│   │   │   ├── DocsView.tsx
+│   │   │   ├── ImageView.tsx
+│   │   │   ├── VoiceView.tsx
+│   │   │   ├── ProjectsView.tsx
+│   │   │   ├── ResearchView.tsx
+│   │   │   └── WorkChatSidebar.tsx
+│   │   ├── App.tsx             # 主应用（Build/Work 条件渲染）
+│   │   ├── ChatPane.tsx
+│   │   ├── Composer.tsx
+│   │   ├── MessageItem.tsx
+│   │   ├── ToolCard.tsx
+│   │   ├── ApprovalModal.tsx
+│   │   ├── DiffView.tsx
+│   │   ├── FileTree.tsx
+│   │   ├── IconDock.tsx
+│   │   ├── TopBar.tsx
+│   │   ├── WelcomeScreen.tsx
+│   │   ├── CommandPalette.tsx
+│   │   ├── ProjectPicker.tsx
+│   │   ├── SuggestedPrompts.tsx
+│   │   └── ErrorBoundary.tsx
+│   ├── stores/
+│   │   ├── chatStore.ts
+│   │   ├── sessionStore.ts
+│   │   ├── settingsStore.ts
+│   │   └── appStore.ts
+│   ├── services/
+│   │   ├── secureStore.ts
+│   │   └── typeValidation.ts
+│   ├── test/
+│   │   ├── setup.ts
+│   │   ├── stores.test.ts
+│   │   └── typeValidation.test.ts
+│   ├── constants.ts
+│   ├── constants/config.ts
+│   ├── i18n.ts
+│   ├── types.ts
+│   └── styles.css
+├── docs/
 ├── package.json
 ├── vite.config.ts
-└── README.md
+└── vitest.config.ts
 ```
 
 ---

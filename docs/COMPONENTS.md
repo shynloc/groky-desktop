@@ -33,45 +33,56 @@
 
 ---
 
-## 2. 主要组件层级
+## 2. 主要组件层级（实际实现）
 
 ```
 App
-├── TopBar
-├── Layout
-│   ├── LeftSidebar
-│   │   ├── ProjectSelector
-│   │   ├── FileTree
-│   │   └── SessionList
-│   ├── MainArea
-│   │   ├── ChatPane
-│   │   │   ├── MessageList (虚拟滚动)
-│   │   │   │   ├── UserMessage
-│   │   │   │   ├── AssistantMessage
-│   │   │   │   │   ├── MarkdownBlock
-│   │   │   │   │   ├── ThinkingBlock (折叠)
-│   │   │   │   │   ├── ToolCallCard (多种类型)
-│   │   │   │   │   └── TodoListBlock
-│   │   │   │   └── SystemEvent (权限、错误等)
-│   │   │   └── ScrollToBottomButton
-│   │   ├── Composer
-│   │   │   ├── InputArea (textarea + @mention)
-│   │   │   ├── ContextPills
-│   │   │   ├── SkillQuickActions
-│   │   │   └── SendButton + ModeToggles (Plan / Yolo)
-│   │   └── DiffOverlay / FullDiffModal (可选浮层)
-│   └── RightPane
-│       ├── ArtifactsPanel
-│       ├── DiffViewer
-│       ├── SkillsPanel
-│       ├── ContextInspector
-│       └── TodoPanel
-├── Modals
-│   ├── ApprovalModal (最重要)
-│   ├── SettingsModal
-│   ├── FilePickerModal
-│   └── SessionPickerModal
-└── CommandPalette (⌘K)
+├── TopBar (品牌 + 项目路径 + 模型选择 + Plan/YOLO + Streaming + 设置)
+├── IconDock (Work/Build 模式切换 + Work 子视图图标 + 头像 + 设置)
+├── Sidebar (条件渲染)
+│   ├── [Build 模式]
+│   │   ├── FileTree (虚拟化目录树)
+│   │   └── Sessions (历史会话列表)
+│   └── [Work 模式] 根据 workView 切换
+│       ├── WorkChatSidebar (最近对话)
+│       ├── DocsSidebar (文档列表)
+│       ├── ImageSidebar (图片缩略图网格)
+│       ├── VoiceSidebar (录音列表)
+│       ├── ProjectsSidebar (项目列表)
+│       └── ResearchSidebar (搜索历史)
+├── MainArea (条件渲染)
+│   ├── [Build 模式]
+│   │   ├── ChatPane (消息列表，虚拟化 >50 条)
+│   │   │   ├── WelcomeScreen (空状态)
+│   │   │   └── MessageItem (每条消息)
+│   │   │       ├── Markdown 渲染 (react-markdown + remark-gfm)
+│   │   │       ├── ThinkingBlock (可折叠)
+│   │   │       └── ToolCard (工具调用卡片)
+│   │   └── Composer (输入框 + context pills + effort)
+│   └── [Work 模式] 根据 workView 切换
+│       ├── ChatPane + Composer (复用 Build)
+│       ├── DocsView (文档分析)
+│       ├── ImageView (图片生成网格)
+│       ├── VoiceView (音频播放器 + 转录)
+│       ├── ProjectsView (看板任务)
+│       └── ResearchView (搜索结果)
+├── RightPane (条件渲染)
+│   ├── [Build 模式] 5 个标签页
+│   │   ├── Context (SuggestedPrompts + 项目/会话/活动信息)
+│   │   ├── Diff (DiffView: 行号 + Accept/Reject)
+│   │   ├── Extensions (Skills/Plugins/Hooks/MCP 列表 + grok inspect)
+│   │   ├── Commands (Slash Commands 列表)
+│   │   └── Settings (Auth/模型/主题/语言)
+│   └── [Work 模式] 根据 workView 切换
+│       ├── SuggestedPrompts + Session 信息 (Chat)
+│       ├── DocsRightPane (文档信息 + 快捷操作)
+│       ├── ImageRightPane (Style/Aspect/Generations)
+│       ├── VoiceRightPane (Action Items + Speaking Time)
+│       ├── ProjectsRightPane (Sprint Progress + Velocity)
+│       └── ResearchRightPane (Report + Related Queries)
+├── ApprovalModal (权限审批弹窗，2x2 网格)
+├── CommandPalette (⌘K，搜索 + 键盘导航)
+└── ProjectPicker (项目选择器)
 ```
 
 ---
