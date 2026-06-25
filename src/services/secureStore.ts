@@ -1,7 +1,7 @@
 import { Store } from '@tauri-apps/plugin-store';
+import { invoke } from '@tauri-apps/api/core';
 
 const STORE_FILE = 'groky-secure.json';
-const API_KEY_KEY = 'xai-api-key';
 const SETTINGS_PREFIX = 'setting-';
 
 // Detect Tauri at runtime
@@ -47,52 +47,88 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
   }
 }
 
-// ── API Key ────────────────────────────────────────────────────────────────
+// ── API Key (Keychain) ─────────────────────────────────────────────────────
 
 export async function getApiKey(): Promise<string> {
+  if (!IS_TAURI) {
+    return localStorage.getItem('groky-api-key') ?? '';
+  }
   try {
-    const s = await getStore();
-    const key = await s.get<string>(API_KEY_KEY);
-    return key ?? '';
+    return await invoke<string>('keychain_get_api_key');
   } catch (error) {
-    console.error('Failed to read API key from secure store:', error);
-    return '';
+    console.error('Failed to read API key from keychain:', error);
+    // Fallback: try reading from legacy store
+    try {
+      const s = await getStore();
+      const key = await s.get<string>('xai-api-key');
+      return key ?? '';
+    } catch {
+      return '';
+    }
   }
 }
 
 export async function setApiKey(key: string): Promise<void> {
-  try {
-    const s = await getStore();
+  if (!IS_TAURI) {
     if (key) {
-      await s.set(API_KEY_KEY, key);
+      localStorage.setItem('groky-api-key', key);
     } else {
-      await s.delete(API_KEY_KEY);
+      localStorage.removeItem('groky-api-key');
     }
-    await s.save();
+    return;
+  }
+  try {
+    if (key) {
+      await invoke('keychain_set_api_key', { key });
+    } else {
+      await invoke('keychain_delete_api_key');
+    }
+    // Also clean up legacy store entry if present
+    try {
+      const s = await getStore();
+      await s.delete('xai-api-key');
+      await s.save();
+    } catch { /* ignore */ }
   } catch (error) {
-    console.error('Failed to save API key to secure store:', error);
+    console.error('Failed to save API key to keychain:', error);
     throw error;
   }
 }
 
 export async function removeApiKey(): Promise<void> {
+  if (!IS_TAURI) {
+    localStorage.removeItem('groky-api-key');
+    return;
+  }
   try {
-    const s = await getStore();
-    await s.delete(API_KEY_KEY);
-    await s.save();
+    await invoke('keychain_delete_api_key');
   } catch (error) {
-    console.error('Failed to remove API key from secure store:', error);
+    console.error('Failed to remove API key from keychain:', error);
     throw error;
   }
 }
 
 export async function migrateFromLocalStorage(): Promise<void> {
   try {
+    // Migrate API key from localStorage to keychain
     const oldKey = localStorage.getItem('groky-api-key');
     if (oldKey) {
       await setApiKey(oldKey);
       localStorage.removeItem('groky-api-key');
-      console.info('Migrated API key from localStorage to secure store');
+      console.info('Migrated API key from localStorage to keychain');
+    }
+    // Migrate API key from legacy plugin-store to keychain
+    if (IS_TAURI) {
+      try {
+        const s = await getStore();
+        const legacyKey = await s.get<string>('xai-api-key');
+        if (legacyKey) {
+          await invoke('keychain_set_api_key', { key: legacyKey });
+          await s.delete('xai-api-key');
+          await s.save();
+          console.info('Migrated API key from plugin-store to keychain');
+        }
+      } catch { /* ignore */ }
     }
     // Migrate other settings from localStorage
     const keys = ['groky-model', 'groky-language', 'groky-theme', 'groky-auth-mode'];

@@ -155,6 +155,45 @@ pub async fn get_git_status(project_path: String) -> Result<Vec<(String, String)
     Ok(result)
 }
 
+// ── Keychain Commands ───────────────────────────────────────────────────────
+
+const KEYCHAIN_SERVICE: &str = "groky-desktop";
+const KEYCHAIN_USER: &str = "xai-api-key";
+
+/// Store API key in the system keychain (macOS Keychain / Windows Credential Manager / Linux Secret Service).
+#[tauri::command]
+pub fn keychain_set_api_key(key: String) -> Result<(), String> {
+    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_USER)
+        .map_err(|e| format!("Keychain entry error: {}", e))?;
+    entry.set_password(&key)
+        .map_err(|e| format!("Failed to store key in keychain: {}", e))?;
+    Ok(())
+}
+
+/// Read API key from the system keychain.
+#[tauri::command]
+pub fn keychain_get_api_key() -> Result<String, String> {
+    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_USER)
+        .map_err(|e| format!("Keychain entry error: {}", e))?;
+    match entry.get_password() {
+        Ok(key) => Ok(key),
+        Err(keyring::Error::NoEntry) => Ok(String::new()),
+        Err(e) => Err(format!("Failed to read key from keychain: {}", e)),
+    }
+}
+
+/// Delete API key from the system keychain.
+#[tauri::command]
+pub fn keychain_delete_api_key() -> Result<(), String> {
+    let entry = keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_USER)
+        .map_err(|e| format!("Keychain entry error: {}", e))?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(format!("Failed to delete key from keychain: {}", e)),
+    }
+}
+
 // ── Grok CLI Commands ────────────────────────────────────────────────────────
 
 /// Run `grok models` and return the list of model IDs.

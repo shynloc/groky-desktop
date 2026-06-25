@@ -1,5 +1,8 @@
-import { Check, X, FileEdit, GitBranch, CheckCheck, XCircle } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { Check, X, FileEdit, GitBranch, CheckCheck, XCircle, Columns, AlignLeft } from 'lucide-react';
 import { PendingDiff } from '../types';
+
+const MonacoDiffEditor = lazy(() => import('@monaco-editor/react').then((m) => ({ default: m.DiffEditor })));
 
 interface DiffViewProps {
   diffs: PendingDiff[];
@@ -10,6 +13,8 @@ interface DiffViewProps {
 }
 
 export function DiffView({ diffs, onApply, onReject, onApplyAll, onRejectAll }: DiffViewProps) {
+  const [viewMode, setViewMode] = useState<'split' | 'unified' | 'monaco'>('unified');
+
   if (diffs.length === 0) {
     return (
       <div className="diff-empty">
@@ -31,6 +36,22 @@ export function DiffView({ diffs, onApply, onReject, onApplyAll, onRejectAll }: 
             <span>{pendingCount} pending change{pendingCount !== 1 ? 's' : ''}</span>
           </div>
           <div className="diff-summary-actions">
+            <div className="diff-view-toggle">
+              <button
+                className={`diff-view-btn ${viewMode === 'unified' ? 'active' : ''}`}
+                onClick={() => setViewMode('unified')}
+                title="Unified view"
+              >
+                <AlignLeft size={11} />
+              </button>
+              <button
+                className={`diff-view-btn ${viewMode === 'monaco' ? 'active' : ''}`}
+                onClick={() => setViewMode('monaco')}
+                title="Monaco side-by-side"
+              >
+                <Columns size={11} />
+              </button>
+            </div>
             {onApplyAll && (
               <button onClick={onApplyAll} className="diff-batch-btn apply-all">
                 <CheckCheck size={12} />
@@ -47,7 +68,7 @@ export function DiffView({ diffs, onApply, onReject, onApplyAll, onRejectAll }: 
         </div>
       )}
       {diffs.map((diff) => (
-        <DiffItem key={diff.id} diff={diff} onApply={onApply} onReject={onReject} />
+        <DiffItem key={diff.id} diff={diff} onApply={onApply} onReject={onReject} viewMode={viewMode} />
       ))}
     </div>
   );
@@ -57,14 +78,26 @@ function DiffItem({
   diff,
   onApply,
   onReject,
+  viewMode,
 }: {
   diff: PendingDiff;
   onApply: (id: string) => void;
   onReject: (id: string) => void;
+  viewMode: 'split' | 'unified' | 'monaco';
 }) {
   const oldLines = diff.oldStr ? diff.oldStr.split('\n') : [];
   const newLines = diff.newStr ? diff.newStr.split('\n') : [];
   const isPending = diff.status === 'pending';
+
+  // Detect language from file extension
+  const ext = diff.filePath.split('.').pop() ?? '';
+  const langMap: Record<string, string> = {
+    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
+    py: 'python', rs: 'rust', go: 'go', json: 'json', md: 'markdown',
+    css: 'css', html: 'html', sh: 'shell', yml: 'yaml', yaml: 'yaml',
+    toml: 'toml', rb: 'ruby', java: 'java', c: 'c', cpp: 'cpp', h: 'c',
+  };
+  const language = langMap[ext] ?? 'plaintext';
 
   return (
     <div className={`diff-item ${diff.status}`}>
@@ -98,22 +131,46 @@ function DiffItem({
         )}
       </div>
 
-      <div className="diff-code">
-        {oldLines.map((line, i) => (
-          <div key={`old-${i}`} className="diff-line removed">
-            <span className="diff-linenum">{i + 1}</span>
-            <span className="diff-gutter">-</span>
-            <span className="diff-content">{line || ' '}</span>
-          </div>
-        ))}
-        {newLines.map((line, i) => (
-          <div key={`new-${i}`} className="diff-line added">
-            <span className="diff-linenum" />
-            <span className="diff-gutter">+</span>
-            <span className="diff-content">{line || ' '}</span>
-          </div>
-        ))}
-      </div>
+      {viewMode === 'monaco' ? (
+        <div className="diff-monaco-container">
+          <Suspense fallback={<div className="diff-monaco-loading">Loading editor…</div>}>
+            <MonacoDiffEditor
+              original={diff.oldStr}
+              modified={diff.newStr}
+              language={language}
+              theme="vs-dark"
+              options={{
+                readOnly: true,
+                renderSideBySide: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 12,
+                lineNumbers: 'on',
+                wordWrap: 'on',
+                automaticLayout: true,
+              }}
+              height="200px"
+            />
+          </Suspense>
+        </div>
+      ) : (
+        <div className="diff-code">
+          {oldLines.map((line, i) => (
+            <div key={`old-${i}`} className="diff-line removed">
+              <span className="diff-linenum">{i + 1}</span>
+              <span className="diff-gutter">-</span>
+              <span className="diff-content">{line || ' '}</span>
+            </div>
+          ))}
+          {newLines.map((line, i) => (
+            <div key={`new-${i}`} className="diff-line added">
+              <span className="diff-linenum" />
+              <span className="diff-gutter">+</span>
+              <span className="diff-content">{line || ' '}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1975,6 +1975,50 @@ kbd {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.diff-view-toggle {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.diff-view-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  color: var(--fg-5);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.diff-view-btn:hover {
+  background: var(--bg-4);
+  color: var(--fg-3);
+}
+
+.diff-view-btn.active {
+  background: var(--bg-4);
+  color: var(--accent);
+}
+
+.diff-monaco-container {
+  border-top: 1px solid var(--border-soft);
+}
+
+.diff-monaco-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--fg-5);
+  font-size: 11px;
+  font-style: italic;
+}
+
 .diff-item {
   border: 1px solid var(--border-soft);
   border-radius: 7px;

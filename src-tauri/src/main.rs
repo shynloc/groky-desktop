@@ -36,6 +36,9 @@ fn main() {
             commands::get_grok_models,
             commands::apply_diff,
             commands::get_git_status,
+            commands::keychain_set_api_key,
+            commands::keychain_get_api_key,
+            commands::keychain_delete_api_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
