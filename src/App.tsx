@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { Clock, Key, Layers, Moon, Play, RefreshCw, Sun, Terminal, Trash2 } from 'lucide-react';
+import { Clock, Key, Layers, Moon, Play, RefreshCw, Sun, Terminal, Trash2, Plus } from 'lucide-react';
 import { TopBar } from './components/TopBar';
 import { Composer } from './components/Composer';
 import { ChatPane } from './components/ChatPane';
@@ -13,6 +13,12 @@ import { IconDock, AppMode, WorkView } from './components/IconDock';
 import { CommandPalette, createDefaultCommands } from './components/CommandPalette';
 import { ProjectPicker } from './components/ProjectPicker';
 import { SuggestedPrompts, getDefaultPrompts } from './components/SuggestedPrompts';
+import { DocsView, DocsSidebar, DocsRightPane } from './components/work/DocsView';
+import { ImageView, ImageSidebar, ImageRightPane } from './components/work/ImageView';
+import { VoiceView, VoiceSidebar, VoiceRightPane } from './components/work/VoiceView';
+import { ProjectsView, ProjectsSidebar, ProjectsRightPane } from './components/work/ProjectsView';
+import { ResearchView, ResearchSidebar, ResearchRightPane } from './components/work/ResearchView';
+import { WorkChatSidebar } from './components/work/WorkChatSidebar';
 import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
@@ -357,311 +363,304 @@ function App() {
 
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <div className="sidebar">
-          <div className="panel-heading">
-            <span>{T('explorer')}</span>
-          </div>
-          <FileTree
-            projectPath={projectPath}
-            onFileClick={handleFileClick}
-            onOpenFolder={handleOpenFolder}
-          />
-
-          <div className="sessions-footer">
-            <div className="panel-kicker">{T('sessions')}</div>
-            {sessions.length === 0 ? (
-              <div className="empty-caption">{T('noHistory')}</div>
-            ) : (
-              <div className="session-list">
-                {sessions.map((sess) => (
-                  <div key={sess.id} className="session-item">
-                    <button
-                      className="session-item-main"
-                      onClick={() => handleSessionResume(sess)}
-                      title={`Resume: ${sess.projectPath}`}
-                    >
-                      <div className="session-item-name">{sess.projectName}</div>
-                      <div className="session-item-preview">{sess.firstMessage}</div>
-                      <div className="session-item-time">
-                        <Clock size={9} />
-                        {new Date(sess.timestamp).toLocaleDateString()}
-                      </div>
-                    </button>
-                    <button
-                      className="session-item-delete"
-                      onClick={(e) => { e.stopPropagation(); removeSession(sess.id); }}
-                      title="Remove from history"
-                    >
-                      <Trash2 size={10} />
-                    </button>
-                  </div>
-                ))}
+          {appMode === 'work' ? (
+            <>
+              <div className="panel-heading">
+                <span>{workView.charAt(0).toUpperCase() + workView.slice(1)}</span>
+                <button className="sidebar-add-btn"><Plus size={12} /></button>
               </div>
-            )}
-          </div>
+              <div className="sidebar-work-content">
+                {workView === 'chat' && <WorkChatSidebar />}
+                {workView === 'docs' && <DocsSidebar />}
+                {workView === 'image' && <ImageSidebar />}
+                {workView === 'voice' && <VoiceSidebar />}
+                {workView === 'projects' && <ProjectsSidebar />}
+                {workView === 'research' && <ResearchSidebar />}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="panel-heading">
+                <span>{T('explorer')}</span>
+              </div>
+              <FileTree
+                projectPath={projectPath}
+                onFileClick={handleFileClick}
+                onOpenFolder={handleOpenFolder}
+              />
+
+              <div className="sessions-footer">
+                <div className="panel-kicker">{T('sessions')}</div>
+                {sessions.length === 0 ? (
+                  <div className="empty-caption">{T('noHistory')}</div>
+                ) : (
+                  <div className="session-list">
+                    {sessions.map((sess) => (
+                      <div key={sess.id} className="session-item">
+                        <button
+                          className="session-item-main"
+                          onClick={() => handleSessionResume(sess)}
+                          title={`Resume: ${sess.projectPath}`}
+                        >
+                          <div className="session-item-name">{sess.projectName}</div>
+                          <div className="session-item-preview">{sess.firstMessage}</div>
+                          <div className="session-item-time">
+                            <Clock size={9} />
+                            {new Date(sess.timestamp).toLocaleDateString()}
+                          </div>
+                        </button>
+                        <button
+                          className="session-item-delete"
+                          onClick={(e) => { e.stopPropagation(); removeSession(sess.id); }}
+                          title="Remove from history"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* ── Chat area ───────────────────────────────────────────────────── */}
+        {/* ── Main area ─────────────────────────────────────────────────────── */}
         <div className="chat-area">
-          <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} language={language} />
-          <Composer
-            onSend={handleSend}
-            disabled={isStreaming}
-            projectPath={projectPath}
-            onOpenFolder={handleOpenFolder}
-            pendingFile={pendingFile}
-            onPendingFileConsumed={() => setPendingFile(null)}
-            language={language}
-          />
+          {appMode === 'work' ? (
+            <div className="work-main">
+              {workView === 'chat' && (
+                <>
+                  <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} language={language} />
+                  <Composer
+                    onSend={handleSend}
+                    disabled={isStreaming}
+                    projectPath={projectPath}
+                    onOpenFolder={handleOpenFolder}
+                    pendingFile={pendingFile}
+                    onPendingFileConsumed={() => setPendingFile(null)}
+                    language={language}
+                  />
+                </>
+              )}
+              {workView === 'docs' && <DocsView />}
+              {workView === 'image' && <ImageView />}
+              {workView === 'voice' && <VoiceView />}
+              {workView === 'projects' && <ProjectsView />}
+              {workView === 'research' && <ResearchView />}
+            </div>
+          ) : (
+            <>
+              <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} language={language} />
+              <Composer
+                onSend={handleSend}
+                disabled={isStreaming}
+                projectPath={projectPath}
+                onOpenFolder={handleOpenFolder}
+                pendingFile={pendingFile}
+                onPendingFileConsumed={() => setPendingFile(null)}
+                language={language}
+              />
+            </>
+          )}
         </div>
 
         {/* ── Right pane ──────────────────────────────────────────────────── */}
         <div className="right-pane">
-          <div className="right-tabs">
-            {([
-              ['context',    T('tabContext')],
-              ['diff',       pendingDiffCount > 0 ? `${T('tabDiff')}·${pendingDiffCount}` : T('tabDiff')],
-              ['extensions', T('tabExtensions')],
-              ['commands',   T('tabCommands')],
-              ['settings',   T('tabSettings')],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setRightTab(key as typeof rightTab)}
-                className={rightTab === key ? 'active' : ''}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {rightTab === 'context' && (
-            <div className="right-scroll context-pane">
+          {appMode === 'work' ? (
+            <div className="right-scroll">
               <SuggestedPrompts
                 prompts={getDefaultPrompts(!!projectPath)}
-                onSelect={(prompt) => {
-                  handleSend(prompt);
-                }}
+                onSelect={(prompt) => handleSend(prompt)}
               />
-              <section>
-                <div className="panel-kicker">{T('project')}</div>
-                <div className="info-box">
-                  <div className="info-label">{T('path')}</div>
-                  <div className="info-value break-anywhere">{projectPath || '—'}</div>
+              {workView === 'chat' && (
+                <div className="context-pane">
+                  <section>
+                    <div className="panel-kicker">{T('session')}</div>
+                    <div className="info-table">
+                      <div><span>{T('model')}</span><strong className="text-accent">{model}</strong></div>
+                      <div><span>Context</span><strong>256k</strong></div>
+                      <div><span>{T('mode')}</span><strong>GrokWork</strong></div>
+                    </div>
+                  </section>
                 </div>
-              </section>
-              <section>
-                <div className="panel-kicker">{T('session')}</div>
-                <div className="info-table">
-                  <div><span>ID</span><strong>{currentSessionId || T('new')}</strong></div>
-                  <div><span>{T('project')}</span><strong>{projectName}</strong></div>
-                  <div><span>{T('model')}</span><strong className="text-accent">{model}</strong></div>
-                  <div><span>{T('effort')}</span><strong>{effortLabel}</strong></div>
-                  <div><span>{T('mode')}</span><strong>{planMode ? T('plan_mode') : T('default')}</strong></div>
-                  <div><span>{T('permission')}</span><strong>{permissionLabel}</strong></div>
-                </div>
-              </section>
-              <section>
-                <div className="panel-kicker">{T('activity')}</div>
-                <div className="info-table">
-                  <div><span>{T('toolCalls')}</span><strong>{activity.toolCalls}</strong></div>
-                  <div><span>{T('filesRead')}</span><strong>{activity.filesRead}</strong></div>
-                  <div><span>{T('filesModified')}</span><strong className="text-accent">{activity.filesModified}</strong></div>
-                  <div><span>{T('lastFile')}</span><strong title={activity.lastFile}>{activity.lastFile}</strong></div>
-                </div>
-              </section>
+              )}
+              {workView === 'docs' && <DocsRightPane />}
+              {workView === 'image' && <ImageRightPane />}
+              {workView === 'voice' && <VoiceRightPane />}
+              {workView === 'projects' && <ProjectsRightPane />}
+              {workView === 'research' && <ResearchRightPane />}
             </div>
-          )}
-
-          {rightTab === 'diff' && (
-            <div className="right-scroll">
-              <DiffView
-                diffs={pendingDiffs}
-                onApply={handleApplyDiff}
-                onReject={(id) => resolveDiff(id, 'rejected')}
-              />
-            </div>
-          )}
-
-          {rightTab === 'extensions' && (
-            <div className="right-scroll skills-pane">
-              <div className="extensions-header">
-                <div>
-                  <div className="panel-kicker">Extensions</div>
-                  <p>Skills, plugins, hooks, MCPs, marketplaces</p>
-                </div>
-                <button onClick={refreshInspect} title="Run grok inspect">
-                  <RefreshCw size={13} className={inspectStatus === 'loading' ? 'spin' : ''} />
-                </button>
+          ) : (
+            <>
+              <div className="right-tabs">
+                {([
+                  ['context',    T('tabContext')],
+                  ['diff',       pendingDiffCount > 0 ? `${T('tabDiff')}·${pendingDiffCount}` : T('tabDiff')],
+                  ['extensions', T('tabExtensions')],
+                  ['commands',   T('tabCommands')],
+                  ['settings',   T('tabSettings')],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setRightTab(key as typeof rightTab)}
+                    className={rightTab === key ? 'active' : ''}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              {[
-                ['skills',      './.grok/skills · ~/.grok/skills · plugin skills'],
-                ['plugins',     './.grok/plugins · ~/.grok/plugins · marketplaces'],
-                ['hooks',       '~/.grok/hooks · project hooks after /hooks-trust'],
-                ['MCP',         'Enabled plugin and config-provided MCP servers'],
-                ['marketplace', 'Configured sources from config.toml'],
-                ['subagents',   'Parallel child sessions for delegated work'],
-              ].map(([name, desc]) => (
-                <button key={name} className="skill-row">
-                  <div>
-                    <span>{name}</span>
-                    <p>{desc}</p>
-                  </div>
-                  <Play size={12} />
-                </button>
-              ))}
-
-              <div className={`inspect-box ${inspectStatus}`}>
-                <div className="inspect-title">
-                  <Terminal size={12} />
-                  <span>grok inspect</span>
+              {rightTab === 'context' && (
+                <div className="right-scroll context-pane">
+                  <SuggestedPrompts
+                    prompts={getDefaultPrompts(!!projectPath)}
+                    onSelect={(prompt) => { handleSend(prompt); }}
+                  />
+                  <section>
+                    <div className="panel-kicker">{T('project')}</div>
+                    <div className="info-box">
+                      <div className="info-label">{T('path')}</div>
+                      <div className="info-value break-anywhere">{projectPath || '—'}</div>
+                    </div>
+                  </section>
+                  <section>
+                    <div className="panel-kicker">{T('session')}</div>
+                    <div className="info-table">
+                      <div><span>ID</span><strong>{currentSessionId || T('new')}</strong></div>
+                      <div><span>{T('project')}</span><strong>{projectName}</strong></div>
+                      <div><span>{T('model')}</span><strong className="text-accent">{model}</strong></div>
+                      <div><span>{T('effort')}</span><strong>{effortLabel}</strong></div>
+                      <div><span>{T('mode')}</span><strong>{planMode ? T('plan_mode') : T('default')}</strong></div>
+                      <div><span>{T('permission')}</span><strong>{permissionLabel}</strong></div>
+                    </div>
+                  </section>
+                  <section>
+                    <div className="panel-kicker">{T('activity')}</div>
+                    <div className="info-table">
+                      <div><span>{T('toolCalls')}</span><strong>{activity.toolCalls}</strong></div>
+                      <div><span>{T('filesRead')}</span><strong>{activity.filesRead}</strong></div>
+                      <div><span>{T('filesModified')}</span><strong className="text-accent">{activity.filesModified}</strong></div>
+                      <div><span>{T('lastFile')}</span><strong title={activity.lastFile}>{activity.lastFile}</strong></div>
+                    </div>
+                  </section>
                 </div>
-                <pre>{inspectText || 'Run inspect to see discovered config sources, instructions, skills, plugins, hooks, and MCP servers.'}</pre>
-              </div>
-            </div>
-          )}
-
-          {rightTab === 'commands' && (
-            <div className="right-scroll skills-pane">
-              <div className="panel-kicker">Slash Commands</div>
-              {[
-                ['/new',                    'Start a new session'],
-                ['/resume',                 'Resume previous sessions'],
-                ['/sessions',               'Browse and pick past sessions'],
-                ['/fork',                   'Fork the current session'],
-                ['/share',                  'Share the current session via URL'],
-                ['/context',                'View context usage'],
-                ['/model <name>',           'Switch active model'],
-                ['/always-approve',         'Toggle permission prompts'],
-                ['/compact [context]',      'Compact conversation history'],
-                ['/plan',                   'View the current session plan'],
-                ['/usage',                  'Show token and credit usage'],
-                ['/plugins /hooks /skills', 'Open the unified extensions modal'],
-              ].map(([name, desc]) => (
-                <button key={name} className="skill-row command-row">
-                  <div>
-                    <span>{name}</span>
-                    <p>{desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {rightTab === 'settings' && (
-            <div className="right-scroll context-pane">
-              {/* ── Auth mode ─────────────────────────────────────────────── */}
-              <section>
-                <div className="panel-kicker">Auth</div>
-                <div className="settings-toggle-group">
-                  <button
-                    className={`settings-toggle-btn ${authMode === 'subscription' ? 'active' : ''}`}
-                    onClick={() => { setAuthMode('subscription'); refreshModels(); }}
-                  >
-                    Grok 订阅
-                  </button>
-                  <button
-                    className={`settings-toggle-btn ${authMode === 'apikey' ? 'active' : ''}`}
-                    onClick={() => setAuthMode('apikey')}
-                  >
-                    <Key size={12} />
-                    API Key
-                  </button>
-                </div>
-              </section>
-
-              {authMode === 'apikey' && (
-                <section>
-                  <div className="panel-kicker">xAI API Key</div>
-                  <div className="api-key-row">
-                    <input
-                      type="password"
-                      className="api-key-input"
-                      placeholder="xai-..."
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                    />
-                    <button
-                      className="api-key-save"
-                      onClick={() => {
-                        setApiKey(apiKeyInput);
-                        refreshModels(apiKeyInput);
-                      }}
-                    >
-                      保存
-                    </button>
-                  </div>
-                  <div className="api-key-hint">
-                    从 <span className="type-mono">console.x.ai</span> 获取 API Key
-                  </div>
-                </section>
               )}
 
-              {/* ── Models ────────────────────────────────────────────────── */}
-              <section>
-                <div className="panel-kicker" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>可用模型</span>
-                  <button
-                    onClick={() => refreshModels()}
-                    className="model-refresh-btn"
-                    title="Run grok models"
-                  >
-                    <RefreshCw size={11} className={modelRefreshing ? 'spin' : ''} />
-                  </button>
+              {rightTab === 'diff' && (
+                <div className="right-scroll">
+                  <DiffView diffs={pendingDiffs} onApply={handleApplyDiff} onReject={(id) => resolveDiff(id, 'rejected')} />
                 </div>
-                {modelRefreshError && (
-                  <div className="model-refresh-error">{modelRefreshError}</div>
-                )}
-                <div className="detected-models">
-                  {(dynamicModels.length > 0 ? dynamicModels : []).map((m) => (
-                    <div key={m.id} className="detected-model-item type-mono">{m.id}</div>
+              )}
+
+              {rightTab === 'extensions' && (
+                <div className="right-scroll skills-pane">
+                  <div className="extensions-header">
+                    <div>
+                      <div className="panel-kicker">Extensions</div>
+                      <p>Skills, plugins, hooks, MCPs, marketplaces</p>
+                    </div>
+                    <button onClick={refreshInspect} title="Run grok inspect">
+                      <RefreshCw size={13} className={inspectStatus === 'loading' ? 'spin' : ''} />
+                    </button>
+                  </div>
+                  {([
+                    ['skills',      './.grok/skills · ~/.grok/skills · plugin skills'],
+                    ['plugins',     './.grok/plugins · ~/.grok/plugins · marketplaces'],
+                    ['hooks',       '~/.grok/hooks · project hooks after /hooks-trust'],
+                    ['MCP',         'Enabled plugin and config-provided MCP servers'],
+                    ['marketplace', 'Configured sources from config.toml'],
+                    ['subagents',   'Parallel child sessions for delegated work'],
+                  ] as const).map(([name, desc]) => (
+                    <button key={name} className="skill-row">
+                      <div><span>{name}</span><p>{desc}</p></div>
+                      <Play size={12} />
+                    </button>
                   ))}
-                  {dynamicModels.length === 0 && !modelRefreshing && (
-                    <div className="empty-caption">点击刷新获取可用模型</div>
+                  <div className={`inspect-box ${inspectStatus}`}>
+                    <div className="inspect-title">
+                      <Terminal size={12} /><span>grok inspect</span>
+                    </div>
+                    <pre>{inspectText || 'Run inspect to see discovered config sources, instructions, skills, plugins, hooks, and MCP servers.'}</pre>
+                  </div>
+                </div>
+              )}
+
+              {rightTab === 'commands' && (
+                <div className="right-scroll skills-pane">
+                  <div className="panel-kicker">Slash Commands</div>
+                  {([
+                    ['/new',                    'Start a new session'],
+                    ['/resume',                 'Resume previous sessions'],
+                    ['/sessions',               'Browse and pick past sessions'],
+                    ['/fork',                   'Fork the current session'],
+                    ['/share',                  'Share the current session via URL'],
+                    ['/context',                'View context usage'],
+                    ['/model <name>',           'Switch active model'],
+                    ['/always-approve',         'Toggle permission prompts'],
+                    ['/compact [context]',      'Compact conversation history'],
+                    ['/plan',                   'View the current session plan'],
+                    ['/usage',                  'Show token and credit usage'],
+                    ['/plugins /hooks /skills', 'Open the unified extensions modal'],
+                  ] as const).map(([name, desc]) => (
+                    <button key={name} className="skill-row command-row">
+                      <div><span>{name}</span><p>{desc}</p></div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {rightTab === 'settings' && (
+                <div className="right-scroll context-pane">
+                  <section>
+                    <div className="panel-kicker">Auth</div>
+                    <div className="settings-toggle-group">
+                      <button className={`settings-toggle-btn ${authMode === 'subscription' ? 'active' : ''}`} onClick={() => { setAuthMode('subscription'); refreshModels(); }}>Grok 订阅</button>
+                      <button className={`settings-toggle-btn ${authMode === 'apikey' ? 'active' : ''}`} onClick={() => setAuthMode('apikey')}><Key size={12} /> API Key</button>
+                    </div>
+                  </section>
+                  {authMode === 'apikey' && (
+                    <section>
+                      <div className="panel-kicker">xAI API Key</div>
+                      <div className="api-key-row">
+                        <input type="password" className="api-key-input" placeholder="xai-..." value={apiKeyInput} onChange={(e) => setApiKeyInput(e.target.value)} />
+                        <button className="api-key-save" onClick={() => { setApiKey(apiKeyInput); refreshModels(apiKeyInput); }}>保存</button>
+                      </div>
+                      <div className="api-key-hint">从 <span className="type-mono">console.x.ai</span> 获取 API Key</div>
+                    </section>
                   )}
-                  {modelRefreshing && <div className="empty-caption">检测中…</div>}
+                  <section>
+                    <div className="panel-kicker" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>可用模型</span>
+                      <button onClick={() => refreshModels()} className="model-refresh-btn" title="Run grok models">
+                        <RefreshCw size={11} className={modelRefreshing ? 'spin' : ''} />
+                      </button>
+                    </div>
+                    {modelRefreshError && <div className="model-refresh-error">{modelRefreshError}</div>}
+                    <div className="detected-models">
+                      {(dynamicModels.length > 0 ? dynamicModels : []).map((m) => (<div key={m.id} className="detected-model-item type-mono">{m.id}</div>))}
+                      {dynamicModels.length === 0 && !modelRefreshing && <div className="empty-caption">点击刷新获取可用模型</div>}
+                      {modelRefreshing && <div className="empty-caption">检测中…</div>}
+                    </div>
+                  </section>
+                  <section>
+                    <div className="panel-kicker">{T('appearance')}</div>
+                    <div className="settings-toggle-group">
+                      <button className={`settings-toggle-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}><Moon size={13} /> {T('darkMode')}</button>
+                      <button className={`settings-toggle-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}><Sun size={13} /> {T('lightMode')}</button>
+                    </div>
+                  </section>
+                  <section>
+                    <div className="panel-kicker">{T('language')}</div>
+                    <div className="settings-toggle-group">
+                      <button className={`settings-toggle-btn ${language === 'zh' ? 'active' : ''}`} onClick={() => setLanguage('zh')}>中文</button>
+                      <button className={`settings-toggle-btn ${language === 'en' ? 'active' : ''}`} onClick={() => setLanguage('en')}>English</button>
+                    </div>
+                  </section>
+                  <div className="skills-note"><Layers size={13} /> {T('settingsNote')}</div>
                 </div>
-              </section>
-
-              {/* ── Appearance ────────────────────────────────────────────── */}
-              <section>
-                <div className="panel-kicker">{T('appearance')}</div>
-                <div className="settings-toggle-group">
-                  <button
-                    className={`settings-toggle-btn ${theme === 'dark' ? 'active' : ''}`}
-                    onClick={() => setTheme('dark')}
-                  >
-                    <Moon size={13} />
-                    {T('darkMode')}
-                  </button>
-                  <button
-                    className={`settings-toggle-btn ${theme === 'light' ? 'active' : ''}`}
-                    onClick={() => setTheme('light')}
-                  >
-                    <Sun size={13} />
-                    {T('lightMode')}
-                  </button>
-                </div>
-              </section>
-              <section>
-                <div className="panel-kicker">{T('language')}</div>
-                <div className="settings-toggle-group">
-                  <button
-                    className={`settings-toggle-btn ${language === 'zh' ? 'active' : ''}`}
-                    onClick={() => setLanguage('zh')}
-                  >中文</button>
-                  <button
-                    className={`settings-toggle-btn ${language === 'en' ? 'active' : ''}`}
-                    onClick={() => setLanguage('en')}
-                  >English</button>
-                </div>
-              </section>
-
-              <div className="skills-note">
-                <Layers size={13} />
-                {T('settingsNote')}
-              </div>
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
