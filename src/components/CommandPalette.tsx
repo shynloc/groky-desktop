@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, FolderOpen, Plus, Settings } from 'lucide-react';
+import { Search, FolderOpen, Plus, Settings, Download } from 'lucide-react';
 
 interface Command {
   id: string;
@@ -144,8 +144,9 @@ export function createDefaultCommands(handlers: {
   onOpenFolder: () => void;
   onNewSession: () => void;
   onOpenSettings: () => void;
+  onExportSession?: () => void;
 }): Command[] {
-  return [
+  const commands: Command[] = [
     {
       id: 'open-folder',
       label: 'Open Project Folder',
@@ -171,4 +172,17 @@ export function createDefaultCommands(handlers: {
       keywords: ['settings', 'preferences', 'config'],
     },
   ];
+
+  if (handlers.onExportSession) {
+    commands.push({
+      id: 'export-session',
+      label: 'Export Session',
+      description: 'Download current session as Markdown',
+      icon: Download,
+      action: handlers.onExportSession,
+      keywords: ['export', 'download', 'save', 'markdown'],
+    });
+  }
+
+  return commands;
 }

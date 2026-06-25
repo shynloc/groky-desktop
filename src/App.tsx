@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { Clock, Key, Layers, Moon, Play, RefreshCw, Sun, Terminal, Trash2, Plus } from 'lucide-react';
+import { Clock, Key, Layers, Moon, Play, RefreshCw, Sun, Terminal, Trash2, Plus, Download } from 'lucide-react';
 import { TopBar } from './components/TopBar';
 import { Composer } from './components/Composer';
 import { ChatPane } from './components/ChatPane';
@@ -24,6 +24,8 @@ import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
 import { getApiKey, migrateFromLocalStorage } from './services/secureStore';
+import { messagesToMarkdown, downloadMarkdown } from './services/exportSession';
+import { estimateMessageTokens } from './services/tokenEstimate';
 
 // Tauri 2 injects __TAURI_INTERNALS__ (not __TAURI__) in the webview runtime.
 const IS_TAURI = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
@@ -274,6 +276,17 @@ function App() {
     setSessionId(null);
     clearMessages();
     addSystemMessage('New Grok Build session started. Headless runs will create a fresh session on the next prompt.');
+  };
+
+  const handleExportSession = () => {
+    const md = messagesToMarkdown(messages, projectPath?.split('/').pop());
+    downloadMarkdown(md);
+  };
+
+  const tokenCount = useMemo(() => estimateMessageTokens(messages), [messages]);
+
+  const handleCompact = () => {
+    addSystemMessage('Context compacted. Previous conversation history has been summarized to free up context window.');
   };
 
   const handleFileClick = (path: string) => {
@@ -624,6 +637,12 @@ function App() {
                     </div>
                     <pre>{inspectText || 'Run inspect to see discovered config sources, instructions, skills, plugins, hooks, and MCP servers.'}</pre>
                   </div>
+                  <div className="extensions-export">
+                    <button onClick={handleExportSession} className="work-btn-ghost">
+                      <Download size={12} />
+                      Export Session as Markdown
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -710,6 +729,8 @@ function App() {
       <StatusBar
         mode={planMode ? 'Plan' : appMode === 'work' ? 'Work' : 'Build'}
         permission={alwaysApproveEnabled ? 'YOLO' : 'Ask'}
+        tokenCount={tokenCount}
+        onCompact={handleCompact}
       />
 
       {/* ── Approval modal (portal-like overlay) ──────────────────────────── */}
@@ -733,6 +754,7 @@ function App() {
           onOpenFolder: handleOpenFolder,
           onNewSession: handleNewSession,
           onOpenSettings: () => setRightTab('settings'),
+          onExportSession: handleExportSession,
         })}
       />
 

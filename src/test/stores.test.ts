@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useChatStore } from '../stores/chatStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { estimateTokens, estimateMessageTokens } from '../services/tokenEstimate';
 
 // Reset stores before each test
 beforeEach(() => {
@@ -186,5 +187,122 @@ describe('SettingsStore', () => {
     const { setDynamicModels } = useSettingsStore.getState();
     setDynamicModels([{ id: 'model-1', label: 'Model 1' }]);
     expect(useSettingsStore.getState().dynamicModels).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Export Session
+// ---------------------------------------------------------------------------
+
+import { messagesToMarkdown } from '../services/exportSession';
+
+describe('exportSession', () => {
+  it('should export empty messages', () => {
+    const md = messagesToMarkdown([], 'test-project');
+    expect(md).toContain('Groky Session Export');
+    expect(md).toContain('test-project');
+  });
+
+  it('should export user and assistant messages', () => {
+    const md = messagesToMarkdown([
+      { id: '1', role: 'user', content: 'Hello' },
+      { id: '2', role: 'assistant', content: 'Hi there!' },
+    ]);
+    expect(md).toContain('## User');
+    expect(md).toContain('Hello');
+    expect(md).toContain('## Groky');
+    expect(md).toContain('Hi there!');
+  });
+
+  it('should export thinking blocks', () => {
+    const md = messagesToMarkdown([
+      { id: '1', role: 'assistant', content: 'Done', thinking: 'Let me think...' },
+    ]);
+    expect(md).toContain('Thinking');
+    expect(md).toContain('Let me think...');
+  });
+
+  it('should export tool calls', () => {
+    const md = messagesToMarkdown([
+      {
+        id: '1', role: 'assistant', content: '',
+        toolCalls: [{ id: 'tc1', tool: 'read_file', status: 'success', filePath: '/foo.ts', input: 'path=/foo.ts' }],
+      },
+    ]);
+    expect(md).toContain('read_file');
+    expect(md).toContain('/foo.ts');
+  });
+
+  it('should export todos as checkboxes', () => {
+    const md = messagesToMarkdown([
+      {
+        id: '1', role: 'assistant', content: '',
+        todos: [
+          { id: 't1', content: 'Fix bug', status: 'completed' },
+          { id: 't2', content: 'Add tests', status: 'pending' },
+        ],
+      },
+    ]);
+    expect(md).toContain('- [x] Fix bug');
+    expect(md).toContain('- [ ] Add tests');
+  });
+
+  it('should export system messages as blockquotes', () => {
+    const md = messagesToMarkdown([
+      { id: '1', role: 'system', content: 'Session started' },
+    ]);
+    expect(md).toContain('> **System**: Session started');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Token Estimation
+// ---------------------------------------------------------------------------
+
+describe('tokenEstimate', () => {
+  it('should return 0 for empty string', () => {
+    expect(estimateTokens('')).toBe(0);
+  });
+
+  it('should estimate ASCII text at ~4 chars per token', () => {
+    const tokens = estimateTokens('hello world'); // 11 chars
+    expect(tokens).toBeGreaterThan(0);
+    expect(tokens).toBeLessThan(10);
+  });
+
+  it('should estimate CJK text at higher token density', () => {
+    const cjkTokens = estimateTokens('你好世界测试文本');
+    expect(cjkTokens).toBeGreaterThan(0);
+  });
+
+  it('should estimate message tokens including tool calls', () => {
+    const tokens = estimateMessageTokens([
+      { id: '1', role: 'user', content: 'Hello' },
+      {
+        id: '2', role: 'assistant', content: 'Response',
+        toolCalls: [{ id: 'tc1', tool: 'read_file', status: 'success', input: 'path=/foo', output: 'file content here' }],
+      },
+    ]);
+    expect(tokens).toBeGreaterThan(10);
+  });
+
+  it('should include todo tokens', () => {
+    const tokens = estimateMessageTokens([
+      {
+        id: '1', role: 'assistant', content: '',
+        todos: [
+          { id: 't1', content: 'Fix the bug in auth module', status: 'completed' },
+          { id: 't2', content: 'Add unit tests', status: 'pending' },
+        ],
+      },
+    ]);
+    expect(tokens).toBeGreaterThan(5);
+  });
+
+  it('should handle messages with thinking blocks', () => {
+    const tokens = estimateMessageTokens([
+      { id: '1', role: 'assistant', content: 'Done', thinking: 'Let me think about this carefully...' },
+    ]);
+    expect(tokens).toBeGreaterThan(5);
   });
 });

@@ -13,6 +13,7 @@ interface TreeNode extends FileEntry {
   children?: TreeNode[];
   isExpanded: boolean;
   isLoading: boolean;
+  gitStatus?: string;
 }
 
 interface FileTreeProps {
@@ -31,6 +32,16 @@ async function fetchEntries(path: string, projectPath?: string | null): Promise<
     isExpanded: false,
     isLoading: false,
   }));
+}
+
+function gitStatusLabel(status: string): { label: string; color: string } {
+  const s = status.trim();
+  if (s.includes('M')) return { label: 'M', color: 'var(--warning)' };
+  if (s.includes('A')) return { label: 'A', color: 'var(--success)' };
+  if (s.includes('D')) return { label: 'D', color: 'var(--danger)' };
+  if (s.includes('?')) return { label: '?', color: 'var(--fg-5)' };
+  if (s.includes('R')) return { label: 'R', color: 'var(--info)' };
+  return { label: s, color: 'var(--fg-4)' };
 }
 
 function TreeRow({
@@ -85,6 +96,14 @@ function TreeRow({
         </>
       )}
       <span className="truncate" style={{ color: 'var(--fg-2)' }}>{node.name}</span>
+      {node.gitStatus && (() => {
+        const { label, color } = gitStatusLabel(node.gitStatus);
+        return (
+          <span className="git-badge" style={{ color, marginLeft: 'auto', flexShrink: 0 }}>
+            {label}
+          </span>
+        );
+      })()}
     </div>
   );
 }
@@ -133,6 +152,7 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [gitStatusMap, setGitStatusMap] = useState<Record<string, string>>({});
 
   // Load root directory whenever projectPath changes
   useEffect(() => {
@@ -140,6 +160,7 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
       setRoots([]);
       setLoadError(null);
       setIsLoading(false);
+      setGitStatusMap({});
       return;
     }
     setLoadError(null);
@@ -147,7 +168,30 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     fetchEntries(projectPath, projectPath)
       .then((entries) => { setRoots(entries); setIsLoading(false); })
       .catch((e) => { setLoadError(String(e)); setIsLoading(false); });
+
+    // Fetch git status
+    invoke<[string, string][]>('get_git_status', { projectPath })
+      .then((pairs) => {
+        const map: Record<string, string> = {};
+        for (const [path, status] of pairs) {
+          const abs = `${projectPath}/${path}`;
+          map[abs] = status;
+        }
+        setGitStatusMap(map);
+      })
+      .catch(() => {});
   }, [projectPath]);
+
+  // Apply git status to tree nodes
+  const applyGitStatus = useCallback((nodes: TreeNode[]): TreeNode[] => {
+    return nodes.map((n) => ({
+      ...n,
+      gitStatus: gitStatusMap[n.path],
+      children: n.children ? applyGitStatus(n.children) : undefined,
+    }));
+  }, [gitStatusMap]);
+
+  const rootsWithGit = useMemo(() => applyGitStatus(roots), [roots, applyGitStatus]);
 
   const handleToggle = useCallback(async (path: string) => {
     // Recursive helper that finds a node and toggles it
@@ -210,11 +254,11 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
 
   // Flatten tree for virtualization
   const flatItems = useMemo(() => {
-    const items = flattenTree(roots);
+    const items = flattenTree(rootsWithGit);
     if (!searchQuery.trim()) return items;
     const q = searchQuery.toLowerCase();
     return items.filter(({ node }) => node.name.toLowerCase().includes(q));
-  }, [roots, searchQuery]);
+  }, [rootsWithGit, searchQuery]);
 
   if (!projectPath) {
     return (
