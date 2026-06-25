@@ -1,4 +1,5 @@
 import { Brain, Code, Zap, FolderOpen } from 'lucide-react';
+import grokyIcon from '../assets/icon.png';
 
 interface WelcomeScreenProps {
   onOpenFolder: () => void;
@@ -11,9 +12,17 @@ export function WelcomeScreen({ onOpenFolder, onStartChat }: WelcomeScreenProps)
       <div className="welcome-content">
         {/* Logo and title */}
         <div className="welcome-header">
-          <div className="welcome-logo">
-            <Brain size={32} />
-          </div>
+          <img
+            src={grokyIcon}
+            alt="Groky"
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 14,
+              objectFit: 'cover',
+              boxShadow: '0 0 0 1px var(--border)',
+            }}
+          />
           <div className="welcome-title">Groky</div>
           <div className="welcome-subtitle">Native GUI for Grok Build · by xAI</div>
         </div>

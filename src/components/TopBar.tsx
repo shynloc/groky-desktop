@@ -130,7 +130,7 @@ export function TopBar({ projectPath, isStreaming, onOpenFolder, onOpenSettings,
           title={alwaysApproveEnabled ? 'Always-approve' : 'Ask mode'}
         >
           <ShieldCheck size={12} />
-          <span>{T('approve')}</span>
+          <span>YOLO</span>
         </button>
 
         <button onClick={onOpenSettings} className="icon-button" title="Settings">
@@ -139,7 +139,11 @@ export function TopBar({ projectPath, isStreaming, onOpenFolder, onOpenSettings,
 
         {isStreaming && (
           <div className="top-streaming">
-            <div className="streaming-dot" />
+            <div className="streaming-dots">
+              <span className="streaming-dot" />
+              <span className="streaming-dot" />
+              <span className="streaming-dot" />
+            </div>
             <span>{T('streaming')}</span>
           </div>
         )}

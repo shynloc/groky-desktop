@@ -82,12 +82,14 @@ function DiffItem({
       <div className="diff-code">
         {oldLines.map((line, i) => (
           <div key={`old-${i}`} className="diff-line removed">
+            <span className="diff-linenum">{i + 1}</span>
             <span className="diff-gutter">-</span>
             <span className="diff-content">{line || ' '}</span>
           </div>
         ))}
         {newLines.map((line, i) => (
           <div key={`new-${i}`} className="diff-line added">
+            <span className="diff-linenum" />
             <span className="diff-gutter">+</span>
             <span className="diff-content">{line || ' '}</span>
           </div>

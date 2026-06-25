@@ -113,7 +113,11 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
         />
         {isStreaming && (
           <div className="streaming-indicator ml-1">
-            <div className="streaming-dot" />
+            <div className="streaming-dots">
+              <span className="streaming-dot" />
+              <span className="streaming-dot" />
+              <span className="streaming-dot" />
+            </div>
             <span>Groky {T('streaming')}…</span>
           </div>
         )}
@@ -140,7 +144,11 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
 
       {isStreaming && (
         <div className="streaming-indicator ml-1">
-          <div className="streaming-dot" />
+          <div className="streaming-dots">
+            <span className="streaming-dot" />
+            <span className="streaming-dot" />
+            <span className="streaming-dot" />
+          </div>
           <span>Groky {T('streaming')}…</span>
         </div>
       )}

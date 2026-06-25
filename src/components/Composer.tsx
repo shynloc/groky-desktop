@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Paperclip, Zap, FileText, FolderOpen } from 'lucide-react';
+import { Send, Paperclip, Zap, FolderOpen, Search } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { EFFORT_LEVELS, EffortLevel } from '../constants';
 import { Language, t } from '../i18n';
@@ -74,7 +74,31 @@ export function Composer({
     }
   };
 
-  const handleAttach = () => {
+  const handleAttach = async () => {
+    const IS_TAURI = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+    if (IS_TAURI && projectPath) {
+      try {
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const selected = await open({
+          directory: false,
+          multiple: false,
+          title: 'Attach File',
+          defaultPath: projectPath,
+        });
+        if (selected && typeof selected === 'string') {
+          const relative = selected.startsWith(projectPath + '/')
+            ? selected.slice(projectPath.length + 1)
+            : selected;
+          const fileRef = `@${relative}`;
+          setValue((prev) => (prev ? `${prev} ${fileRef}` : fileRef));
+          textareaRef.current?.focus();
+          return;
+        }
+      } catch {
+        // fall through to placeholder
+      }
+    }
+    // Browser mode fallback
     const fileExample = '@src/main.rs';
     setValue((prev) => (prev ? prev + ' ' + fileExample : fileExample));
     textareaRef.current?.focus();
@@ -109,15 +133,15 @@ export function Composer({
   return (
     <div className="composer">
       <div className="context-pills">
-        <div className="context-pill">
-          <FileText size={11} className="opacity-60" />
-          <span>{projectPath.split('/').pop()}</span>
+        <div className="context-pill web-search">
+          <Search size={10} className="opacity-60" />
+          <span>web search on</span>
         </div>
         <div
           onClick={handleAttach}
           className="context-pill add-file"
         >
-          + @file
+          + attach file
         </div>
       </div>
 

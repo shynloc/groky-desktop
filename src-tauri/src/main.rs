@@ -23,33 +23,19 @@ fn find_grok_binary() -> String {
     "grok".to_string()
 }
 
-/// Sanitize user input to prevent command injection
-fn sanitize_prompt(input: &str) -> String {
-    const MAX_LENGTH: usize = 100_000;
+/// Sanitize user input — log dangerous patterns for debugging.
+/// Note: Tokio Command does not use a shell, so these patterns cannot cause
+/// injection. This function only aids observability.
+fn log_dangerous_patterns(input: &str) {
     const DANGEROUS_PATTERNS: &[&str] = &[
-        "$(", "`", "${", "|", "&", ";", ">", "<", ">>", "<<",
-        "\n\n", "\r\n\r\n",
+        "$(", "`", "${",
     ];
-    
-    let mut sanitized = input.to_string();
-    
-    // Truncate to max length
-    if sanitized.len() > MAX_LENGTH {
-        sanitized.truncate(MAX_LENGTH);
-        sanitized.push_str("\n... [truncated]");
-    }
-    
-    // Remove null bytes
-    sanitized = sanitized.replace('\0', "");
-    
-    // Log if dangerous patterns found (for debugging)
+
     for pattern in DANGEROUS_PATTERNS {
-        if sanitized.contains(pattern) {
+        if input.contains(pattern) {
             eprintln!("[SECURITY] Potentially dangerous pattern '{}' found in prompt", pattern);
         }
     }
-    
-    sanitized
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -80,7 +66,18 @@ struct InspectReport {
 }
 
 #[tauri::command]
-fn list_directory(path: String) -> Result<Vec<FileEntry>, String> {
+fn list_directory(path: String, project_path: Option<String>) -> Result<Vec<FileEntry>, String> {
+    // Security: restrict to project directory if provided
+    if let Some(ref project) = project_path {
+        let dir_canonical = std::fs::canonicalize(&path)
+            .map_err(|e| format!("Invalid path: {}", e))?;
+        let project_canonical = std::fs::canonicalize(project)
+            .map_err(|e| format!("Invalid project path: {}", e))?;
+        if !dir_canonical.starts_with(&project_canonical) {
+            return Err("Access denied: path is outside project directory".to_string());
+        }
+    }
+
     let read = std::fs::read_dir(&path).map_err(|e| e.to_string())?;
 
     const SKIP: &[&str] = &[
@@ -162,19 +159,21 @@ async fn read_file_content(path: String, project_path: Option<String>) -> Result
         }
     }
     
-    // Security: Block access to sensitive files
-    let sensitive_patterns = [
-        ".ssh/", ".gnupg/", ".aws/", ".config/",
+    // Security: Block access to sensitive files (exact filename matching)
+    const SENSITIVE_DIRS: &[&str] = &[".ssh", ".gnupg", ".aws"];
+    const SENSITIVE_FILENAMES: &[&str] = &[
         "id_rsa", "id_ed25519", "id_ecdsa",
         ".env", ".env.local", ".env.production",
-        "credentials", "secrets", "password",
     ];
-    
-    let path_lower = path.to_lowercase();
-    for pattern in &sensitive_patterns {
-        if path_lower.contains(pattern) {
-            return Err("Access denied: sensitive file detected".to_string());
-        }
+
+    let path_obj = std::path::Path::new(&path);
+    let filename = path_obj.file_name().unwrap_or_default().to_string_lossy();
+    let is_sensitive = path_obj.components().any(|c| {
+        SENSITIVE_DIRS.contains(&c.as_os_str().to_string_lossy().as_ref())
+    }) || SENSITIVE_FILENAMES.iter().any(|&pat| filename == pat);
+
+    if is_sensitive {
+        return Err("Access denied: sensitive file detected".to_string());
     }
     
     let bytes = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
@@ -200,6 +199,44 @@ async fn inspect_grok(cwd: Option<String>) -> Result<InspectReport, String> {
         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         status: output.status.code(),
     })
+}
+
+/// Apply a search_replace diff to a file on disk.
+#[tauri::command]
+async fn apply_diff(
+    file_path: String,
+    old_str: String,
+    new_str: String,
+    project_path: String,
+) -> Result<String, String> {
+    // Security: validate file is within project
+    let project_canonical = std::fs::canonicalize(&project_path)
+        .map_err(|e| format!("Invalid project path: {}", e))?;
+    let abs_path = if std::path::Path::new(&file_path).is_absolute() {
+        file_path.clone()
+    } else {
+        format!("{}/{}", project_path, file_path)
+    };
+    let file_canonical = std::fs::canonicalize(&abs_path)
+        .map_err(|e| format!("Invalid file path: {}", e))?;
+    if !file_canonical.starts_with(&project_canonical) {
+        return Err("Access denied: file is outside project directory".to_string());
+    }
+
+    let content = tokio::fs::read_to_string(&abs_path)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    if !content.contains(&old_str) {
+        return Err("Old string not found in file — the file may have changed".to_string());
+    }
+
+    let new_content = content.replacen(&old_str, &new_str, 1);
+    tokio::fs::write(&abs_path, &new_content)
+        .await
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    Ok(format!("Applied diff to {}", abs_path))
 }
 
 const TEXT_TYPES: &[&str] = &["text", "content", "thought", "end", "error"];
@@ -307,8 +344,7 @@ async fn send_grok_prompt(
         prompt
     };
     
-    // Security: Sanitize prompt to prevent injection
-    let prompt = sanitize_prompt(&prompt);
+    log_dangerous_patterns(&prompt);
 
     let mut cmd = TokioCommand::new(&grok_bin);
     cmd.arg("-p")
@@ -418,13 +454,14 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            send_grok_prompt,
-            list_directory,
-            inspect_grok,
-            reply_to_grok,
-            read_file_content,
-            get_grok_models,
-        ])
+        send_grok_prompt,
+        list_directory,
+        inspect_grok,
+        reply_to_grok,
+        read_file_content,
+        get_grok_models,
+        apply_diff,
+    ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

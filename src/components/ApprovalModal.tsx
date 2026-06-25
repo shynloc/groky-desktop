@@ -63,30 +63,26 @@ export function ApprovalModal({ request, onResolve }: ApprovalModalProps) {
         )}
 
         <div className="approval-actions">
+          <button onClick={() => handleResponse('once')} className="approval-btn allow-once">
+            <Shield size={12} />
+            Allow once
+            <span className="approval-btn-hint">This command only</span>
+          </button>
+          <button onClick={() => handleResponse('session')} className="approval-btn allow-session">
+            <Zap size={12} />
+            Allow in session
+            <span className="approval-btn-hint">This conversation</span>
+          </button>
+          <button onClick={() => handleResponse('session')} className="approval-btn always">
+            <ShieldCheck size={12} />
+            Always allow
+            <span className="approval-btn-hint">All future runs</span>
+          </button>
           <button onClick={() => handleResponse('deny')} className="approval-btn deny">
             <ShieldOff size={12} />
             Deny
+            <span className="approval-btn-hint">Skip this call</span>
           </button>
-          <div className="approval-allow-group">
-            <button onClick={() => handleResponse('once')} className="approval-btn allow-once">
-              <Shield size={12} />
-              Allow Once
-            </button>
-            <button onClick={() => handleResponse('session')} className="approval-btn allow-session">
-              <Zap size={12} />
-              Allow Session
-            </button>
-            <button
-              onClick={async () => {
-                try { await invoke('reply_to_grok', { response: 'y' }); } catch { /* ignore */ }
-                onResolve('session');
-              }}
-              className="approval-btn always"
-            >
-              <ShieldCheck size={12} />
-              Always
-            </button>
-          </div>
         </div>
 
         <div className="approval-hint">

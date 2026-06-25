@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { GrokModelId, EffortLevel, AuthMode } from '../constants';
 import { Language } from '../i18n';
-import { setApiKey as saveApiKey } from '../services/secureStore';
+import { setApiKey as saveApiKey, setSetting, getSetting } from '../services/secureStore';
 
 // ---------------------------------------------------------------------------
 // Store shape
@@ -43,6 +43,9 @@ export interface SettingsStore {
   // Dynamic models
   dynamicModels: { id: string; label: string }[];
   setDynamicModels: (models: { id: string; label: string }[]) => void;
+
+  // Init (load persisted settings)
+  initSettings: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,8 +54,8 @@ export interface SettingsStore {
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
   // ── Model ────────────────────────────────────────────────────────────────
-  model: (localStorage.getItem('groky-model') ?? 'grok-build'),
-  setModel: (m) => { localStorage.setItem('groky-model', m); set({ model: m }); },
+  model: 'grok-build',
+  setModel: (m) => { setSetting('model', m); set({ model: m }); },
 
   // ── Effort ───────────────────────────────────────────────────────────────
   effort: null,
@@ -67,33 +70,25 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   toggleAlwaysApprove: () => set((s) => ({ alwaysApproveEnabled: !s.alwaysApproveEnabled })),
 
   // ── Language ─────────────────────────────────────────────────────────────
-  language: (localStorage.getItem('groky-language') as Language | null) ?? 'zh',
-  setLanguage: (l) => {
-    localStorage.setItem('groky-language', l);
-    set({ language: l });
-  },
+  language: 'zh',
+  setLanguage: (l) => { setSetting('language', l); set({ language: l }); },
 
   // ── Theme ────────────────────────────────────────────────────────────────
-  theme: (localStorage.getItem('groky-theme') as 'dark' | 'light' | null) ?? 'dark',
-  setTheme: (t) => {
-    localStorage.setItem('groky-theme', t);
-    set({ theme: t });
-  },
+  theme: 'dark',
+  setTheme: (t) => { setSetting('theme', t); set({ theme: t }); },
 
   // ── Auth ─────────────────────────────────────────────────────────────────
-  authMode: (localStorage.getItem('groky-auth-mode') as AuthMode | null) ?? 'subscription',
-  setAuthMode: (m) => { localStorage.setItem('groky-auth-mode', m); set({ authMode: m }); },
+  authMode: 'subscription',
+  setAuthMode: (m) => { setSetting('auth-mode', m); set({ authMode: m }); },
 
   // ── API Key ──────────────────────────────────────────────────────────────
-  apiKey: '', // Will be loaded asynchronously
+  apiKey: '',
   setApiKey: async (k) => {
     try {
       await saveApiKey(k);
       set({ apiKey: k });
     } catch (error) {
       console.error('Failed to save API key:', error);
-      // Fallback to localStorage in case of error
-      localStorage.setItem('groky-api-key', k);
       set({ apiKey: k });
     }
   },
@@ -101,4 +96,20 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   // ── Dynamic models ───────────────────────────────────────────────────────
   dynamicModels: [],
   setDynamicModels: (models) => set({ dynamicModels: models }),
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  initSettings: async () => {
+    const [model, language, theme, authMode] = await Promise.all([
+      getSetting<string>('model', 'grok-build'),
+      getSetting<string>('language', 'zh'),
+      getSetting<string>('theme', 'dark'),
+      getSetting<string>('auth-mode', 'subscription'),
+    ]);
+    set({
+      model: model as GrokModelId,
+      language: language as Language,
+      theme: theme as 'dark' | 'light',
+      authMode: authMode as AuthMode,
+    });
+  },
 }));

@@ -42,12 +42,13 @@ function App() {
     addUserMessage, addSystemMessage, handleGrokEvent, clearMessages,
     pendingApproval, setPendingApproval, allowToolForSession,
     pendingDiffs, resolveDiff,
-    sessions, removeSession,
+    sessions, removeSession, addSession,
     language, setLanguage,
     theme, setTheme,
     authMode, setAuthMode,
     apiKey, setApiKey,
     dynamicModels, setDynamicModels,
+    initSettings,
   } = useAppStore();
 
   const [apiKeyInput, setApiKeyInput] = useState(apiKey);
@@ -59,23 +60,25 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Load API key from secure store on startup
+  // Load persisted settings and API key on startup
   useEffect(() => {
-    const loadApiKey = async () => {
-      if (!IS_TAURI) return;
+    const loadSettings = async () => {
       try {
         await migrateFromLocalStorage();
-        const storedKey = await getApiKey();
-        if (storedKey) {
-          setApiKey(storedKey);
-          setApiKeyInput(storedKey);
+        await initSettings();
+        if (IS_TAURI) {
+          const storedKey = await getApiKey();
+          if (storedKey) {
+            setApiKey(storedKey);
+            setApiKeyInput(storedKey);
+          }
         }
       } catch (error) {
-        console.error('Failed to load API key:', error);
+        console.error('Failed to load settings:', error);
       }
     };
-    loadApiKey();
-  }, [setApiKey]);
+    loadSettings();
+  }, [setApiKey, initSettings]);
 
   // Command Palette keyboard shortcut (⌘K)
   useEffect(() => {
@@ -114,22 +117,46 @@ function App() {
   // B5: Stable ref so cleanup always calls the resolved unlisten fn.
   const unlistenRef = useRef<(() => void) | null>(null);
   const handleGrokEventRef = useRef(handleGrokEvent);
-  
-  // Update ref when handleGrokEvent changes
-  useEffect(() => {
-    handleGrokEventRef.current = handleGrokEvent;
-  }, [handleGrokEvent]);
+  const setSessionIdRef = useRef(setSessionId);
+  const addSessionRef = useRef(addSession);
+  const projectPathRef = useRef(projectPath);
+  const firstMessageRef = useRef<string | null>(null);
+
+  // Update refs when values change
+  useEffect(() => { handleGrokEventRef.current = handleGrokEvent; }, [handleGrokEvent]);
+  useEffect(() => { setSessionIdRef.current = setSessionId; }, [setSessionId]);
+  useEffect(() => { addSessionRef.current = addSession; }, [addSession]);
+  useEffect(() => { projectPathRef.current = projectPath; }, [projectPath]);
 
   useEffect(() => {
     const handler = (event: { payload: GrokEvent }) => {
+      const { session_id, type } = event.payload;
       handleGrokEventRef.current(event.payload);
+
+      // Capture session_id from grok events
+      if (session_id) {
+        setSessionIdRef.current(session_id);
+      }
+
+      // Save session to history when stream ends
+      if (type === 'end' && projectPathRef.current && firstMessageRef.current) {
+        const path = projectPathRef.current;
+        addSessionRef.current({
+          id: session_id || `local-${Date.now()}`,
+          projectPath: path,
+          projectName: path.split('/').pop() || path,
+          firstMessage: firstMessageRef.current,
+          timestamp: Date.now(),
+        });
+        firstMessageRef.current = null;
+      }
     };
-    
+
     listen<GrokEvent>('grok-event', handler).then((fn) => {
       unlistenRef.current = fn;
     });
     return () => { unlistenRef.current?.(); };
-  }, []); // No dependencies needed since we use ref
+  }, []);
 
   const handleOpenFolder = async () => {
     try {
@@ -171,6 +198,9 @@ function App() {
     }
 
     addUserMessage(rawPrompt);
+    if (!firstMessageRef.current) {
+      firstMessageRef.current = rawPrompt.slice(0, 120);
+    }
     setIsStreaming(true);
 
     try {
@@ -226,6 +256,31 @@ function App() {
     // Do not clear messages — preserve current chat context.
     // The next prompt will resume the grok session transparently.
     addSystemMessage(`已恢复会话：${session.projectName} · "${session.firstMessage}…"`);
+  };
+
+  const handleApplyDiff = async (id: string) => {
+    const diff = pendingDiffs.find((d) => d.id === id);
+    if (!diff || !projectPath) {
+      resolveDiff(id, 'applied');
+      return;
+    }
+
+    if (IS_TAURI) {
+      try {
+        await invoke('apply_diff', {
+          filePath: diff.filePath,
+          oldStr: diff.oldStr,
+          newStr: diff.newStr,
+          projectPath,
+        });
+      } catch (err) {
+        console.error('Failed to apply diff:', err);
+        addSystemMessage(`Failed to apply diff to ${diff.filePath}: ${err}`);
+        resolveDiff(id, 'rejected');
+        return;
+      }
+    }
+    resolveDiff(id, 'applied');
   };
 
   const activity = useMemo(() => {
@@ -421,7 +476,7 @@ function App() {
             <div className="right-scroll">
               <DiffView
                 diffs={pendingDiffs}
-                onApply={(id) => resolveDiff(id, 'applied')}
+                onApply={handleApplyDiff}
                 onReject={(id) => resolveDiff(id, 'rejected')}
               />
             </div>

@@ -21,8 +21,11 @@ interface FileTreeProps {
   onOpenFolder?: () => void;
 }
 
-async function fetchEntries(path: string): Promise<TreeNode[]> {
-  const entries = await invoke<FileEntry[]>('list_directory', { path });
+async function fetchEntries(path: string, projectPath?: string | null): Promise<TreeNode[]> {
+  const entries = await invoke<FileEntry[]>('list_directory', {
+    path,
+    projectPath: projectPath ?? undefined,
+  });
   return entries.map((e) => ({
     ...e,
     isExpanded: false,
@@ -140,7 +143,7 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     }
     setLoadError(null);
     setIsLoading(true);
-    fetchEntries(projectPath)
+    fetchEntries(projectPath, projectPath)
       .then((entries) => { setRoots(entries); setIsLoading(false); })
       .catch((e) => { setLoadError(String(e)); setIsLoading(false); });
   }, [projectPath]);

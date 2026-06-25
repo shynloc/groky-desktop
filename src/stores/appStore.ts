@@ -57,5 +57,6 @@ export function useAppStore() {
     setAuthMode: settings.setAuthMode,
     setApiKey: settings.setApiKey,
     setDynamicModels: settings.setDynamicModels,
+    initSettings: settings.initSettings,
   };
 }

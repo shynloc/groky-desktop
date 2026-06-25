@@ -10,6 +10,7 @@ import {
   Search,
 } from 'lucide-react';
 import { Language, t } from '../i18n';
+import grokyIcon from '../assets/icon.png';
 
 export type AppMode = 'work' | 'build';
 export type WorkView = 'chat' | 'docs' | 'image' | 'voice' | 'projects' | 'research';
@@ -79,6 +80,11 @@ export function IconDock({
 
       {/* Spacer */}
       <div className="icon-dock-spacer" />
+
+      {/* Groky avatar */}
+      <div className="icon-dock-avatar">
+        <img src={grokyIcon} alt="Groky" />
+      </div>
 
       {/* Settings */}
       <button

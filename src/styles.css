@@ -425,12 +425,27 @@ textarea::placeholder {
   font-weight: 500;
 }
 
+.streaming-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
 .streaming-dot {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--accent);
+  display: inline-block;
   animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.streaming-dot:nth-child(2) {
+  animation-delay: 0.25s;
+}
+
+.streaming-dot:nth-child(3) {
+  animation-delay: 0.5s;
 }
 
 .main-layout {
@@ -487,6 +502,22 @@ textarea::placeholder {
   flex: 1;
 }
 
+.icon-dock-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.icon-dock-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .sidebar,
 .right-pane {
   display: flex;
@@ -497,12 +528,12 @@ textarea::placeholder {
 }
 
 .sidebar {
-  width: 260px;
+  width: 220px;
   border-right: 1px solid var(--border);
 }
 
 .right-pane {
-  width: 300px;
+  width: 260px;
   border-left: 1px solid var(--border);
 }
 
@@ -1636,8 +1667,8 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(7px);
   animation: fade-in 150ms ease;
 }
 
@@ -1736,61 +1767,79 @@ kbd {
 }
 
 .approval-actions {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   padding: 14px 18px;
-  border-top: 1px solid var(--border-soft);
 }
 
 .approval-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 13px;
-  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: 7px;
   font-size: 12px;
   font-weight: 600;
-  transition: opacity 150ms ease;
+  transition: opacity 150ms ease, background 150ms ease, border-color 150ms ease;
+  cursor: pointer;
 }
 
 .approval-btn:hover {
-  opacity: 0.85;
+  opacity: 0.9;
+}
+
+.approval-btn .approval-btn-hint {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
 }
 
 .approval-btn.deny {
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.07);
   color: var(--danger);
-  flex-shrink: 0;
 }
 
-.approval-allow-group {
-  display: flex;
-  flex: 1;
-  gap: 6px;
+.approval-btn.deny:hover {
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .approval-btn.allow-once {
-  flex: 1;
   border: 1px solid var(--border);
   background: var(--bg-3);
-  color: var(--fg-2);
+  color: var(--fg-1);
+}
+
+.approval-btn.allow-once:hover {
+  border-color: var(--border-bright);
+  background: var(--bg-4);
 }
 
 .approval-btn.allow-session {
-  flex: 1;
-  border: 0;
-  background: var(--accent);
-  color: white;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+
+.approval-btn.allow-session:hover {
+  border-color: var(--border-bright);
+  background: var(--bg-4);
 }
 
 .approval-btn.always {
-  flex: 1;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--success);
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  background: rgba(249, 115, 22, 0.09);
+  color: var(--accent);
+}
+
+.approval-btn.always:hover {
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.approval-allow-group {
+  display: contents;
 }
 
 .approval-hint {
@@ -1886,11 +1935,23 @@ kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  width: 20px;
   flex-shrink: 0;
   padding: 2px 0;
   font-weight: 700;
   font-size: 12px;
+}
+
+.diff-linenum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 26px;
+  flex-shrink: 0;
+  padding: 2px 8px 2px 0;
+  color: var(--fg-5);
+  font-size: 10px;
+  user-select: none;
 }
 
 .diff-line.removed .diff-gutter {
