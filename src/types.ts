@@ -7,13 +7,22 @@ export interface ToolCall {
   filePath?: string;
 }
 
+export interface TodoItem {
+  id: string;
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   thinking?: string;
   toolCalls?: ToolCall[];
+  todos?: TodoItem[];
   isStreaming?: boolean;
+  /** Original prompt text (stored for resend capability) */
+  originalPrompt?: string;
 }
 
 export interface GrokEvent {

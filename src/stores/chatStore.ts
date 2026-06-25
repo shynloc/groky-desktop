@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatMessage, GrokEvent, ToolCall, ApprovalRequest, PendingDiff } from '../types';
+import { ChatMessage, GrokEvent, ToolCall, TodoItem, ApprovalRequest, PendingDiff } from '../types';
 import { safeParseRawToolCall, safeParseRawToolResult, safeParsePermissionRequest } from '../services/typeValidation';
 
 // ---------------------------------------------------------------------------
@@ -96,6 +96,19 @@ function extractDiff(
   };
 }
 
+function parseTodos(raw?: Record<string, unknown>): TodoItem[] | null {
+  if (!raw) return null;
+  const todos = raw.todos ?? raw.items ?? raw.tasks;
+  if (!Array.isArray(todos)) return null;
+  return todos.map((t: Record<string, unknown>, i: number) => ({
+    id: String(t.id ?? `todo-${i}`),
+    content: String(t.content ?? t.text ?? t.title ?? ''),
+    status: (['pending', 'in_progress', 'completed'].includes(t.status as string)
+      ? t.status
+      : t.done === true ? 'completed' : 'pending') as TodoItem['status'],
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // Store shape
 // ---------------------------------------------------------------------------
@@ -136,7 +149,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     set((s) => ({
       messages: [
         ...s.messages,
-        { id: `user-${Date.now()}`, role: 'user', content },
+        { id: `user-${Date.now()}`, role: 'user', content, originalPrompt: content },
       ],
     })),
 
@@ -167,11 +180,13 @@ export const useChatStore = create<ChatStore>((set) => ({
 
       // ── Error ─────────────────────────────────────────────────────────────
       if (type === 'error') {
+        // Find the last user message to store as originalPrompt for retry
+        const lastUserMsg = [...msgs].reverse().find((m) => m.role === 'user');
         return {
           isStreaming: false,
           messages: [
             ...msgs,
-            { id: `err-${Date.now()}`, role: 'system' as const, content: `Error: ${data}` },
+            { id: `err-${Date.now()}`, role: 'system' as const, content: `Error: ${data}`, originalPrompt: lastUserMsg?.originalPrompt },
           ],
         };
       }
@@ -271,6 +286,34 @@ export const useChatStore = create<ChatStore>((set) => ({
               {
                 ...last,
                 toolCalls: resolveToolResult(last.toolCalls ?? [], raw_json),
+              },
+            ],
+          };
+        }
+        return {};
+      }
+
+      // ── Todo write / update ───────────────────────────────────────────────
+      if (type === 'todo_write' || type === 'todo_update' || type === 'todowrite' || type === 'todoupdate') {
+        const todos = parseTodos(raw_json);
+        if (todos && todos.length > 0) {
+          if (last?.role === 'assistant' && last.isStreaming) {
+            return {
+              messages: [
+                ...msgs.slice(0, -1),
+                { ...last, todos },
+              ],
+            };
+          }
+          return {
+            messages: [
+              ...msgs,
+              {
+                id: `asst-${Date.now()}-${Math.random()}`,
+                role: 'assistant' as const,
+                content: '',
+                todos,
+                isStreaming: true,
               },
             ],
           };

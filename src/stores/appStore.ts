@@ -37,6 +37,7 @@ export function useAppStore() {
     setSessionId: session.setSessionId,
     removeSession: session.removeSession,
     addSession: session.addSession,
+    initSessions: session.initSessions,
 
     // Settings store
     model: settings.model,

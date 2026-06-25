@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { List } from 'react-window';
-import { Folder, FolderOpen, File, ChevronRight, ChevronDown, FolderOpen as FolderOpenIcon, Loader2 } from 'lucide-react';
+import { Folder, FolderOpen, File, ChevronRight, ChevronDown, FolderOpen as FolderOpenIcon, Loader2, Search } from 'lucide-react';
 
 interface FileEntry {
   name: string;
@@ -132,6 +132,7 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load root directory whenever projectPath changes
   useEffect(() => {
@@ -208,7 +209,12 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
   }, []);
 
   // Flatten tree for virtualization
-  const flatItems = useMemo(() => flattenTree(roots), [roots]);
+  const flatItems = useMemo(() => {
+    const items = flattenTree(roots);
+    if (!searchQuery.trim()) return items;
+    const q = searchQuery.toLowerCase();
+    return items.filter(({ node }) => node.name.toLowerCase().includes(q));
+  }, [roots, searchQuery]);
 
   if (!projectPath) {
     return (
@@ -232,10 +238,19 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     );
   }
 
-  // Use virtualized list for large trees
+  // Search input + virtualized list for large trees
   if (flatItems.length > 100) {
     return (
       <div className="file-tree-scroll flex-1">
+        <div className="file-tree-search">
+          <Search size={11} />
+          <input
+            type="text"
+            placeholder="Filter files…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
         <List
           defaultHeight={600}
           rowCount={flatItems.length}
@@ -262,9 +277,18 @@ export function FileTree({ projectPath, onFileClick, onOpenFolder }: FileTreePro
     );
   }
 
-  // Use regular rendering for small trees
+  // Regular rendering for small trees
   return (
     <div className="file-tree-scroll overflow-auto flex-1 py-1">
+      <div className="file-tree-search">
+        <Search size={11} />
+        <input
+          type="text"
+          placeholder="Filter files…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
       {flatItems.map(({ node, depth }) => (
         <TreeRow
           key={node.path}

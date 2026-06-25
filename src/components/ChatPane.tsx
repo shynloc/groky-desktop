@@ -13,6 +13,7 @@ interface ChatPaneProps {
   messages: ChatMessage[];
   isStreaming: boolean;
   onOpenFolder?: () => void;
+  onResend?: (prompt: string) => void;
   language?: Language;
 }
 
@@ -22,19 +23,19 @@ function VirtualMessageRow({
   index,
   style,
 }: {
-  data: { messages: ChatMessage[] };
+  data: { messages: ChatMessage[]; onResend?: (prompt: string) => void };
   index: number;
   style: React.CSSProperties;
 }) {
   const msg = data.messages[index];
   return (
     <div style={style}>
-      <MessageItem message={msg} isLast={index === data.messages.length - 1} />
+      <MessageItem message={msg} isLast={index === data.messages.length - 1} onResend={data.onResend} />
     </div>
   );
 }
 
-export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' }: ChatPaneProps) {
+export function ChatPane({ messages, isStreaming, onOpenFolder, onResend, language = 'zh' }: ChatPaneProps) {
   const T = (key: Parameters<typeof t>[1]) => t(language, key);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,7 +106,7 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
             <VirtualMessageRow
               index={index}
               style={style}
-              data={{ messages }}
+              data={{ messages, onResend }}
               {...props}
             />
           )}
@@ -137,7 +138,7 @@ export function ChatPane({ messages, isStreaming, onOpenFolder, language = 'zh' 
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.12, ease: 'easeOut' }}
           >
-            <MessageItem message={msg} isLast={index === messages.length - 1} />
+            <MessageItem message={msg} isLast={index === messages.length - 1} onResend={onResend} />
           </motion.div>
         ))}
       </AnimatePresence>

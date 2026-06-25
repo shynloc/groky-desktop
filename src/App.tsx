@@ -19,6 +19,7 @@ import { VoiceView, VoiceSidebar, VoiceRightPane } from './components/work/Voice
 import { ProjectsView, ProjectsSidebar, ProjectsRightPane } from './components/work/ProjectsView';
 import { ResearchView, ResearchSidebar, ResearchRightPane } from './components/work/ResearchView';
 import { WorkChatSidebar } from './components/work/WorkChatSidebar';
+import { StatusBar } from './components/StatusBar';
 import { useAppStore } from './stores/appStore';
 import { GrokEvent } from './types';
 import { t } from './i18n';
@@ -55,6 +56,7 @@ function App() {
     apiKey, setApiKey,
     dynamicModels, setDynamicModels,
     initSettings,
+    initSessions,
   } = useAppStore();
 
   const [apiKeyInput, setApiKeyInput] = useState(apiKey);
@@ -72,6 +74,7 @@ function App() {
       try {
         await migrateFromLocalStorage();
         await initSettings();
+        await initSessions();
         if (IS_TAURI) {
           const storedKey = await getApiKey();
           if (storedKey) {
@@ -84,19 +87,43 @@ function App() {
       }
     };
     loadSettings();
-  }, [setApiKey, initSettings]);
+  }, [setApiKey, initSettings, initSessions]);
 
-  // Command Palette keyboard shortcut (⌘K)
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // ⌘K / Ctrl+K: Toggle command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Escape: Close overlays in priority order
+      if (e.key === 'Escape') {
+        if (commandPaletteOpen) { setCommandPaletteOpen(false); return; }
+        if (projectPickerOpen) { setProjectPickerOpen(false); return; }
+        if (pendingApproval) { setPendingApproval(null); return; }
+        return;
+      }
+
+      // ⌘N: New session
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNewSession();
+        return;
+      }
+
+      // ⌘O: Open folder
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        handleOpenFolder();
+        return;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [commandPaletteOpen, projectPickerOpen, pendingApproval]);
 
   const refreshModels = async (key?: string) => {
     if (!IS_TAURI) return;
@@ -289,6 +316,20 @@ function App() {
     resolveDiff(id, 'applied');
   };
 
+  const handleApplyAll = async () => {
+    const pending = pendingDiffs.filter((d) => d.status === 'pending');
+    for (const diff of pending) {
+      await handleApplyDiff(diff.id);
+    }
+  };
+
+  const handleRejectAll = () => {
+    const pending = pendingDiffs.filter((d) => d.status === 'pending');
+    for (const diff of pending) {
+      resolveDiff(diff.id, 'rejected');
+    }
+  };
+
   const activity = useMemo(() => {
     const toolCalls = messages.flatMap((m) => m.toolCalls ?? []);
     const filePaths = toolCalls.map((t) => t.filePath).filter(Boolean);
@@ -431,7 +472,7 @@ function App() {
             <div className="work-main">
               {workView === 'chat' && (
                 <>
-                  <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} language={language} />
+                  <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} onResend={handleSend} language={language} />
                   <Composer
                     onSend={handleSend}
                     disabled={isStreaming}
@@ -443,15 +484,15 @@ function App() {
                   />
                 </>
               )}
-              {workView === 'docs' && <DocsView />}
-              {workView === 'image' && <ImageView />}
-              {workView === 'voice' && <VoiceView />}
-              {workView === 'projects' && <ProjectsView />}
-              {workView === 'research' && <ResearchView />}
+              {workView === 'docs' && <><DocsView /><Composer onSend={handleSend} disabled={isStreaming} projectPath={projectPath} onOpenFolder={handleOpenFolder} language={language} /></>}
+              {workView === 'image' && <><ImageView /><Composer onSend={handleSend} disabled={isStreaming} projectPath={projectPath} onOpenFolder={handleOpenFolder} language={language} /></>}
+              {workView === 'voice' && <><VoiceView /><Composer onSend={handleSend} disabled={isStreaming} projectPath={projectPath} onOpenFolder={handleOpenFolder} language={language} /></>}
+              {workView === 'projects' && <><ProjectsView /><Composer onSend={handleSend} disabled={isStreaming} projectPath={projectPath} onOpenFolder={handleOpenFolder} language={language} /></>}
+              {workView === 'research' && <><ResearchView /><Composer onSend={handleSend} disabled={isStreaming} projectPath={projectPath} onOpenFolder={handleOpenFolder} language={language} /></>}
             </div>
           ) : (
             <>
-              <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} language={language} />
+              <ChatPane messages={messages} isStreaming={isStreaming} onOpenFolder={handleOpenFolder} onResend={handleSend} language={language} />
               <Composer
                 onSend={handleSend}
                 disabled={isStreaming}
@@ -549,7 +590,7 @@ function App() {
 
               {rightTab === 'diff' && (
                 <div className="right-scroll">
-                  <DiffView diffs={pendingDiffs} onApply={handleApplyDiff} onReject={(id) => resolveDiff(id, 'rejected')} />
+                  <DiffView diffs={pendingDiffs} onApply={handleApplyDiff} onReject={(id) => resolveDiff(id, 'rejected')} onApplyAll={handleApplyAll} onRejectAll={handleRejectAll} />
                 </div>
               )}
 
@@ -664,6 +705,12 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* ── Status Bar ────────────────────────────────────────────────────── */}
+      <StatusBar
+        mode={planMode ? 'Plan' : appMode === 'work' ? 'Work' : 'Build'}
+        permission={alwaysApproveEnabled ? 'YOLO' : 'Ask'}
+      />
 
       {/* ── Approval modal (portal-like overlay) ──────────────────────────── */}
       {pendingApproval && (

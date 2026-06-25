@@ -1,13 +1,15 @@
-import { Check, X, FileEdit, GitBranch } from 'lucide-react';
+import { Check, X, FileEdit, GitBranch, CheckCheck, XCircle } from 'lucide-react';
 import { PendingDiff } from '../types';
 
 interface DiffViewProps {
   diffs: PendingDiff[];
   onApply: (id: string) => void;
   onReject: (id: string) => void;
+  onApplyAll?: () => void;
+  onRejectAll?: () => void;
 }
 
-export function DiffView({ diffs, onApply, onReject }: DiffViewProps) {
+export function DiffView({ diffs, onApply, onReject, onApplyAll, onRejectAll }: DiffViewProps) {
   if (diffs.length === 0) {
     return (
       <div className="diff-empty">
@@ -17,14 +19,31 @@ export function DiffView({ diffs, onApply, onReject }: DiffViewProps) {
     );
   }
 
-  const pendingCount = diffs.filter((d) => d.status === 'pending').length;
+  const pendingDiffs = diffs.filter((d) => d.status === 'pending');
+  const pendingCount = pendingDiffs.length;
 
   return (
     <div className="diff-list">
       {pendingCount > 0 && (
         <div className="diff-summary">
-          <GitBranch size={11} />
-          <span>{pendingCount} pending change{pendingCount !== 1 ? 's' : ''}</span>
+          <div className="diff-summary-left">
+            <GitBranch size={11} />
+            <span>{pendingCount} pending change{pendingCount !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="diff-summary-actions">
+            {onApplyAll && (
+              <button onClick={onApplyAll} className="diff-batch-btn apply-all">
+                <CheckCheck size={12} />
+                Apply All
+              </button>
+            )}
+            {onRejectAll && (
+              <button onClick={onRejectAll} className="diff-batch-btn reject-all">
+                <XCircle size={12} />
+                Dismiss All
+              </button>
+            )}
+          </div>
         </div>
       )}
       {diffs.map((diff) => (

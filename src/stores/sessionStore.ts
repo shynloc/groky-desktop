@@ -1,26 +1,18 @@
 import { create } from 'zustand';
 import { Session } from '../types';
 import { MAX_SESSIONS } from '../constants/config';
+import { getSetting, setSetting } from '../services/secureStore';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function loadSessions(): Session[] {
-  try {
-    const stored = localStorage.getItem('groky-sessions');
-    return stored ? (JSON.parse(stored) as Session[]) : [];
-  } catch {
-    return [];
-  }
+async function loadSessions(): Promise<Session[]> {
+  return getSetting<Session[]>('sessions', []);
 }
 
 function saveSessions(sessions: Session[]): void {
-  try {
-    localStorage.setItem('groky-sessions', JSON.stringify(sessions));
-  } catch {
-    // ignore quota errors
-  }
+  setSetting('sessions', sessions);
 }
 
 // ---------------------------------------------------------------------------
@@ -40,6 +32,7 @@ export interface SessionStore {
   sessions: Session[];
   removeSession: (id: string) => void;
   addSession: (session: Session) => void;
+  initSessions: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +49,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   setSessionId: (id) => set({ currentSessionId: id }),
 
   // ── Session history ───────────────────────────────────────────────────────
-  sessions: loadSessions(),
+  sessions: [],
   removeSession: (id) =>
     set((s) => {
       const sessions = s.sessions.filter((ss) => ss.id !== id);
@@ -69,4 +62,8 @@ export const useSessionStore = create<SessionStore>((set) => ({
       saveSessions(sessions);
       return { sessions };
     }),
+  initSessions: async () => {
+    const sessions = await loadSessions();
+    set({ sessions });
+  },
 }));

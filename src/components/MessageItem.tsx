@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronDown, ChevronRight, Brain } from 'lucide-react';
+import { ChevronDown, ChevronRight, Brain, Copy, RotateCcw, Check } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { ToolCard } from './ToolCard';
+import { TodoBlock } from './TodoBlock';
 import grokyAvatar from '../assets/icon.png';
 
 interface MessageItemProps {
   message: ChatMessage;
   isLast?: boolean;
+  onResend?: (prompt: string) => void;
 }
 
 // Custom Markdown component map — styled to match the dark theme
@@ -73,17 +75,37 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
   pre: ({ children }) => <>{children}</>,
 };
 
-export function MessageItem({ message }: MessageItemProps) {
+export function MessageItem({ message, onResend }: MessageItemProps) {
   const [thinkingOpen, setThinkingOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const isUser   = message.role === 'user';
   const isSystem = message.role === 'system';
+  const isError  = isSystem && message.content.startsWith('Error');
+
+  const handleCopy = async () => {
+    const text = message.originalPrompt ?? message.content;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
 
   if (isSystem) {
     return (
       <div className="system-message-row">
-        <div className="system-message type-mono">
+        <div className={`system-message type-mono ${isError ? 'error' : ''}`}>
           {message.content}
+          {isError && onResend && message.originalPrompt && (
+            <button
+              className="msg-retry-btn"
+              onClick={() => onResend(message.originalPrompt!)}
+            >
+              <RotateCcw size={11} />
+              <span>Retry</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -95,6 +117,16 @@ export function MessageItem({ message }: MessageItemProps) {
         {isUser ? (
           <div className="message-bubble user-bubble">
             {message.content}
+            <div className="msg-actions">
+              <button className="msg-action-btn" onClick={handleCopy} title="Copy message">
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+              </button>
+              {onResend && (
+                <button className="msg-action-btn" onClick={() => onResend(message.originalPrompt ?? message.content)} title="Resend">
+                  <RotateCcw size={12} />
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div>
@@ -136,12 +168,28 @@ export function MessageItem({ message }: MessageItemProps) {
               </div>
             )}
 
+            {/* Todo list */}
+            {message.todos && message.todos.length > 0 && (
+              <div className="mb-3">
+                <TodoBlock todos={message.todos} />
+              </div>
+            )}
+
             {/* Main content — rendered as Markdown */}
             {message.content && (
               <div className="message-content text-[13.5px] leading-[1.5] text-white/92">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                   {message.content}
                 </ReactMarkdown>
+              </div>
+            )}
+
+            {/* Copy button for assistant messages */}
+            {message.content && (
+              <div className="msg-actions assistant">
+                <button className="msg-action-btn" onClick={handleCopy} title="Copy message">
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
               </div>
             )}
           </div>
